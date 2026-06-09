@@ -1,8 +1,8 @@
 {
   "intro": "The Zürich Barracudas are one of Switzerland's oldest and largest baseball clubs. Our 1. Liga side (Barracudas 4) plays competitive baseball in the Zürich region and welcomes players of all experience levels who want to learn and enjoy the game.",
   "practices": [
-    { "day": "Monday", "time": "18:00 – 20:00", "location": "Helen-Keller-Strasse 20, 8051 Zürich", "lat": 47.4021219, "lon": 8.5950897 },
-    { "day": "Wednesday", "time": "19:30 – 21:30", "location": "Helen-Keller-Strasse 20, 8051 Zürich", "lat": 47.4021219, "lon": 8.5950897 }
+    { "day": "Monday", "time": "18:00 – 20:00", "location": "Heerenschürli R7, Sagentobelbachweg, 8301 Dübendorf", "lat": 47.4032415, "lon": 8.5962701 },
+    { "day": "Wednesday", "time": "19:30 – 21:30", "location": "Heerenschürli R7, Sagentobelbachweg, 8301 Dübendorf", "lat": 47.4032415, "lon": 8.5962701 }
   ],
   "contacts": [
     { "role": "Head Coach", "name": "Coach Name", "email": "coach@barracudas.ch" },

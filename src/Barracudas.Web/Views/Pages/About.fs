@@ -16,7 +16,12 @@ let private locationCell (p: Practice) =
             sprintf
                 "https://www.openstreetmap.org/export/embed.html?bbox=%s,%s,%s,%s&layer=mapnik&marker=%s,%s"
                 (f (lon - 0.004)) (f (lat - 0.0025)) (f (lon + 0.004)) (f (lat + 0.0025)) (f lat) (f lon)
-        let fullMap = sprintf "https://www.openstreetmap.org/?mlat=%s&mlon=%s#map=17/%s/%s" (f lat) (f lon) (f lat) (f lon)
+        let q = System.Uri.EscapeDataString p.Location
+        let googleMaps = sprintf "https://www.google.com/maps/search/?api=1&query=%s,%s" (f lat) (f lon)
+        let appleMaps = sprintf "https://maps.apple.com/?ll=%s,%s&q=%s" (f lat) (f lon) q
+        let mapLink (href: string) (label: string) =
+            a [ _href href; _target "_blank"; _rel "noopener"
+                _class "flex-1 px-3 py-2 text-center text-xs font-semibold text-barracuda-accent hover:text-barracuda-gold" ] [ str label ]
         td [ _class "py-3 text-ink-muted" ] [
             span [ _class "group relative inline-block" ] [
                 span [ _class "cursor-help border-b border-dashed border-barracuda-accent/60 transition-colors group-hover:text-accent-text" ] [ str p.Location ]
@@ -27,9 +32,9 @@ let private locationCell (p: Practice) =
                                  _class "h-44 w-full border-0"
                                  KeyValue("loading", "lazy")
                                  KeyValue("title", sprintf "Map: %s" p.Location) ] []
-                        a [ _href fullMap; _target "_blank"; _rel "noopener"
-                            _class "block bg-barracuda-dark px-3 py-2 text-xs font-semibold text-barracuda-accent hover:text-barracuda-gold" ] [
-                            str "Open in OpenStreetMap ↗"
+                        div [ _class "flex divide-x divide-barracuda-accent/30 bg-barracuda-dark" ] [
+                            mapLink googleMaps "Google Maps ↗"
+                            mapLink appleMaps "Apple Maps ↗"
                         ]
                     ]
                 ]

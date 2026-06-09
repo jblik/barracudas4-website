@@ -17,7 +17,11 @@ type Game =
       Status: GameStatus
       /// Barracudas score (None until the game has data).
       OurScore: int option
-      OpponentScore: int option }
+      OpponentScore: int option
+      /// EasyScore game id (e.g. "19321"), when known.
+      EasyScoreId: string option
+      /// Box score URL for a completed game (EasyScore), when available.
+      BoxScoreUrl: string option }
 
 type Standing =
     { Rank: int

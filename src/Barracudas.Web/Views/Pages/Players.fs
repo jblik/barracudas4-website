@@ -23,8 +23,13 @@ let private row (p: PlayerStat) =
 
 let listView (players: PlayerStat list) : XmlNode list =
     [ pageHeader "Players" "Individual batting stats"
-      div [ _class "overflow-x-auto" ] [
-       table [ _class "w-full min-w-[40rem] text-left text-sm" ] [
+      if List.isEmpty players then
+        p [ _class "rounded-lg bg-card p-6 text-ink-muted ring-1 ring-card-ring" ] [
+            str "Individual player stats aren't published in the public league feed. They'll appear here once direct EasyScore API access is set up."
+        ]
+      else
+       div [ _class "overflow-x-auto" ] [
+        table [ _class "w-full min-w-[40rem] text-left text-sm" ] [
           thead [ _class "border-b border-barracuda-accent/40 text-xs font-bold uppercase tracking-wider text-accent-text" ] [
               tr [] [
                   th [ _class "pb-2 pr-4" ] [ str "No." ]

@@ -39,14 +39,26 @@ let private scoreText (g: Game) =
     | Some us, Some them -> sprintf "%d – %d" us them
     | _ -> "—"
 
-/// One row in a schedule list.
+/// One row in a schedule list. Completed games link to their EasyScore box score.
 let gameRow (g: Game) =
     let homeAway = if g.IsHome then "vs" else "@"
-    tr [ _class "border-b border-line transition-colors hover:bg-row-hover" ] [
+    let baseCls = "border-b border-line transition-colors hover:bg-row-hover"
+    let rowAttrs =
+        match g.BoxScoreUrl with
+        | Some url ->
+            [ _class (baseCls + " cursor-pointer")
+              KeyValue("onclick", sprintf "window.open('%s','_blank','noopener')" url)
+              _title "View box score on EasyScore" ]
+        | None -> [ _class baseCls ]
+    let score =
+        match g.BoxScoreUrl with
+        | Some _ -> sprintf "%s ↗" (scoreText g)
+        | None -> scoreText g
+    tr rowAttrs [
         td [ _class "py-3 pr-4 text-ink-muted whitespace-nowrap" ] [ str (g.Date.ToString "ddd, MMM d") ]
         td [ _class "py-3 pr-4 font-semibold text-ink-strong" ] [ str (sprintf "%s %s" homeAway g.Opponent) ]
         td [ _class "py-3 pr-4 text-ink-muted" ] [ str g.Location ]
-        td [ _class "py-3 pr-4 font-bold text-accent-text whitespace-nowrap" ] [ str (scoreText g) ]
+        td [ _class "py-3 pr-4 font-bold text-accent-text whitespace-nowrap" ] [ str score ]
         td [ _class "py-3" ] [ statusBadge g.Status ]
     ]
 

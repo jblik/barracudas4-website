@@ -21,14 +21,15 @@ type IEasyScoreClient =
     /// Current in-progress game, if any.
     abstract member GetLiveGame: unit -> Task<LiveGame option>
 
-/// Real EasyScore client. Endpoints/JSON shapes are unconfirmed until an API key
-/// is obtained (support@easyscore.com) and verified against postman.easyscore.com,
-/// so methods currently raise. Until then run with EasyScore:UseMock=true.
-/// The HttpClient is pre-configured (base address + auth header) in Program.fs.
+/// Direct EasyScore API client (future). Endpoints/JSON shapes are unconfirmed
+/// until an API key is obtained (support@easyscore.com) and verified against
+/// postman.easyscore.com, so methods currently raise. The live site instead uses
+/// SwissBaseballClient, which needs no key. Wire this in once the API key arrives
+/// (esp. for per-player stats and live scores, which the public feed lacks).
 type EasyScoreClient(http: HttpClient, cfg: Config.AppConfig) =
     let notReady name : 'a =
         raise (NotImplementedException(
-            sprintf "EasyScore.%s not wired yet — set EasyScore:UseMock=true. TODO: confirm endpoint against postman.easyscore.com" name))
+            sprintf "EasyScore.%s not wired yet — using SwissBaseballClient. TODO: confirm endpoint against postman.easyscore.com" name))
 
     interface IEasyScoreClient with
         // TODO: confirm against postman.easyscore.com — GET /seasons/{season}/teams/{TeamId}/games

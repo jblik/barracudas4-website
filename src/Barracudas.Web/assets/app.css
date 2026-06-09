@@ -1,0 +1,10 @@
+@import "tailwindcss";
+
+/* Scan the F# view files for utility class names. */
+@source "../**/*.fs";
+
+/* Oakland A's palette → drives bg-barracuda / text-barracuda-accent utilities. */
+@theme {
+  --color-barracuda: #003831;
+  --color-barracuda-accent: #efb21e;
+}

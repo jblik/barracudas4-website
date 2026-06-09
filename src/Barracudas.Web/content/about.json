@@ -1,0 +1,13 @@
+{
+  "intro": "The Zürich Barracudas are one of Switzerland's oldest and largest baseball clubs. Our 1. Liga side (Barracudas 4) plays competitive baseball in the Zürich region and welcomes players of all experience levels who want to learn and enjoy the game.",
+  "practices": [
+    { "day": "Tuesday", "time": "19:00 – 21:00", "location": "Heerenschürli, Zürich" },
+    { "day": "Thursday", "time": "19:00 – 21:00", "location": "Heerenschürli, Zürich" },
+    { "day": "Sunday", "time": "10:00 – 12:00", "location": "Heerenschürli, Zürich" }
+  ],
+  "contacts": [
+    { "role": "Head Coach", "name": "Coach Name", "email": "coach@barracudas.ch" },
+    { "role": "Team Manager", "name": "Manager Name", "email": "manager@barracudas.ch" },
+    { "role": "General Info", "name": "Zürich Barracudas", "email": "info@barracudas.ch" }
+  ]
+}

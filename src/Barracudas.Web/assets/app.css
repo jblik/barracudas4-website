@@ -3,8 +3,14 @@
 /* Scan the F# view files for utility class names. */
 @source "../**/*.fs";
 
-/* Oakland A's palette → drives bg-barracuda / text-barracuda-accent utilities. */
+/* Oakland A's palette → green + gold, expanded into a usable scale.
+   Utilities: bg-barracuda, bg-barracuda-dark, bg-barracuda-light,
+   text-barracuda-accent, text-barracuda-gold, etc. */
 @theme {
-  --color-barracuda: #003831;
-  --color-barracuda-accent: #efb21e;
+  --color-barracuda-dark: #00211a;   /* page canvas */
+  --color-barracuda: #003831;        /* primary green (A's) */
+  --color-barracuda-light: #015c47;  /* cards / hovers */
+  --color-barracuda-line: #0a6e54;   /* borders */
+  --color-barracuda-accent: #efb21e; /* gold (A's) */
+  --color-barracuda-gold: #ffc733;   /* bright gold for emphasis */
 }

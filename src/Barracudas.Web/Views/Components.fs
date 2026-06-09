@@ -11,28 +11,28 @@ let _hxSwap (v: string) = KeyValue("hx-swap", v)
 let _hxTarget (v: string) = KeyValue("hx-target", v)
 let _hxPushUrl (v: string) = KeyValue("hx-push-url", v)
 
-/// Standard page heading.
+/// Standard page heading with a gold accent bar.
 let pageHeader (title: string) (subtitle: string) =
-    header [ _class "mb-8" ] [
-        h1 [ _class "text-3xl font-bold text-white" ] [ str title ]
+    header [ _class "mb-8 border-l-4 border-barracuda-accent pl-4" ] [
+        h1 [ _class "text-3xl font-black uppercase tracking-tight text-white" ] [ str title ]
         if subtitle <> "" then
-            p [ _class "mt-1 text-slate-400" ] [ str subtitle ]
+            p [ _class "mt-1 font-medium text-barracuda-gold" ] [ str subtitle ]
     ]
 
 /// A labelled stat card (used on standings / team stats).
 let statCard (s: TeamStat) =
-    div [ _class "rounded-lg bg-slate-800 p-4 ring-1 ring-slate-700" ] [
-        div [ _class "text-2xl font-bold text-barracuda-accent" ] [ str s.Value ]
-        div [ _class "mt-1 text-sm uppercase tracking-wide text-slate-400" ] [ str s.Label ]
+    div [ _class "rounded-lg bg-barracuda-light/60 p-4 ring-1 ring-barracuda-accent/30 transition-colors hover:ring-barracuda-accent/70" ] [
+        div [ _class "text-3xl font-black text-barracuda-accent" ] [ str s.Value ]
+        div [ _class "mt-1 text-sm font-semibold uppercase tracking-wide text-emerald-200/70" ] [ str s.Label ]
     ]
 
 let private statusBadge (status: GameStatus) =
     let cls, label =
         match status with
         | Live -> "bg-red-600 text-white animate-pulse", "LIVE"
-        | Final -> "bg-slate-600 text-slate-100", "Final"
-        | Scheduled -> "bg-barracuda text-white", "Upcoming"
-    span [ _class (sprintf "rounded px-2 py-0.5 text-xs font-semibold %s" cls) ] [ str label ]
+        | Final -> "bg-barracuda-light text-emerald-100 ring-1 ring-barracuda-line", "Final"
+        | Scheduled -> "bg-barracuda-accent text-barracuda-dark", "Upcoming"
+    span [ _class (sprintf "rounded px-2 py-0.5 text-xs font-bold uppercase tracking-wide %s" cls) ] [ str label ]
 
 let private scoreText (g: Game) =
     match g.OurScore, g.OpponentScore with
@@ -42,11 +42,11 @@ let private scoreText (g: Game) =
 /// One row in a schedule list.
 let gameRow (g: Game) =
     let homeAway = if g.IsHome then "vs" else "@"
-    tr [ _class "border-b border-slate-700 hover:bg-slate-800/50" ] [
-        td [ _class "py-3 pr-4 text-slate-400 whitespace-nowrap" ] [ str (g.Date.ToString "ddd, MMM d") ]
-        td [ _class "py-3 pr-4 font-medium text-white" ] [ str (sprintf "%s %s" homeAway g.Opponent) ]
-        td [ _class "py-3 pr-4 text-slate-400" ] [ str g.Location ]
-        td [ _class "py-3 pr-4 font-semibold text-white whitespace-nowrap" ] [ str (scoreText g) ]
+    tr [ _class "border-b border-barracuda-line/40 transition-colors hover:bg-barracuda-light/40" ] [
+        td [ _class "py-3 pr-4 text-emerald-200/70 whitespace-nowrap" ] [ str (g.Date.ToString "ddd, MMM d") ]
+        td [ _class "py-3 pr-4 font-semibold text-white" ] [ str (sprintf "%s %s" homeAway g.Opponent) ]
+        td [ _class "py-3 pr-4 text-emerald-200/70" ] [ str g.Location ]
+        td [ _class "py-3 pr-4 font-bold text-barracuda-accent whitespace-nowrap" ] [ str (scoreText g) ]
         td [ _class "py-3" ] [ statusBadge g.Status ]
     ]
 

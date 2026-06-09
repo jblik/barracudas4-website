@@ -5,7 +5,7 @@ open Barracudas.Web.Domain
 open Barracudas.Web.Views.Components
 
 let private tableHead =
-    thead [ _class "border-b border-barracuda-accent/40 text-xs font-bold uppercase tracking-wider text-barracuda-accent" ] [
+    thead [ _class "border-b border-barracuda-accent/40 text-xs font-bold uppercase tracking-wider text-accent-text" ] [
         tr [] [
             th [ _class "pb-2 pr-4" ] [ str "Date" ]
             th [ _class "pb-2 pr-4" ] [ str "Matchup" ]
@@ -18,11 +18,13 @@ let private tableHead =
 /// The swappable table body (also returned by /schedule/partial).
 let table (games: Game list) : XmlNode =
     if List.isEmpty games then
-        p [ _class "py-6 text-emerald-200/60" ] [ str "No games to show." ]
+        p [ _class "py-6 text-ink-muted" ] [ str "No games to show." ]
     else
-        table [ _class "w-full text-left text-sm" ] [
-            tableHead
-            tbody [] [ for g in games -> gameRow g ]
+        div [ _class "overflow-x-auto" ] [
+            table [ _class "w-full min-w-[34rem] text-left text-sm" ] [
+                tableHead
+                tbody [] [ for g in games -> gameRow g ]
+            ]
         ]
 
 let private tab (label: string) (key: string) (active: string) =

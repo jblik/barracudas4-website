@@ -14,16 +14,16 @@ let _hxPushUrl (v: string) = KeyValue("hx-push-url", v)
 /// Standard page heading with a gold accent bar.
 let pageHeader (title: string) (subtitle: string) =
     header [ _class "mb-8 border-l-4 border-barracuda-accent pl-4" ] [
-        h1 [ _class "text-3xl font-black uppercase tracking-tight text-white" ] [ str title ]
+        h1 [ _class "text-3xl font-black uppercase tracking-tight text-ink-strong" ] [ str title ]
         if subtitle <> "" then
-            p [ _class "mt-1 font-medium text-barracuda-gold" ] [ str subtitle ]
+            p [ _class "mt-1 font-medium text-accent-text" ] [ str subtitle ]
     ]
 
 /// A labelled stat card (used on standings / team stats).
 let statCard (s: TeamStat) =
-    div [ _class "rounded-lg bg-barracuda-light/60 p-4 ring-1 ring-barracuda-accent/30 transition-colors hover:ring-barracuda-accent/70" ] [
-        div [ _class "text-3xl font-black text-barracuda-accent" ] [ str s.Value ]
-        div [ _class "mt-1 text-sm font-semibold uppercase tracking-wide text-emerald-200/70" ] [ str s.Label ]
+    div [ _class "rounded-lg bg-card p-4 ring-1 ring-card-ring transition-colors hover:ring-barracuda-accent/70" ] [
+        div [ _class "text-3xl font-black text-accent-text" ] [ str s.Value ]
+        div [ _class "mt-1 text-sm font-semibold uppercase tracking-wide text-ink-muted" ] [ str s.Label ]
     ]
 
 let private statusBadge (status: GameStatus) =
@@ -42,11 +42,11 @@ let private scoreText (g: Game) =
 /// One row in a schedule list.
 let gameRow (g: Game) =
     let homeAway = if g.IsHome then "vs" else "@"
-    tr [ _class "border-b border-barracuda-line/40 transition-colors hover:bg-barracuda-light/40" ] [
-        td [ _class "py-3 pr-4 text-emerald-200/70 whitespace-nowrap" ] [ str (g.Date.ToString "ddd, MMM d") ]
-        td [ _class "py-3 pr-4 font-semibold text-white" ] [ str (sprintf "%s %s" homeAway g.Opponent) ]
-        td [ _class "py-3 pr-4 text-emerald-200/70" ] [ str g.Location ]
-        td [ _class "py-3 pr-4 font-bold text-barracuda-accent whitespace-nowrap" ] [ str (scoreText g) ]
+    tr [ _class "border-b border-line transition-colors hover:bg-row-hover" ] [
+        td [ _class "py-3 pr-4 text-ink-muted whitespace-nowrap" ] [ str (g.Date.ToString "ddd, MMM d") ]
+        td [ _class "py-3 pr-4 font-semibold text-ink-strong" ] [ str (sprintf "%s %s" homeAway g.Opponent) ]
+        td [ _class "py-3 pr-4 text-ink-muted" ] [ str g.Location ]
+        td [ _class "py-3 pr-4 font-bold text-accent-text whitespace-nowrap" ] [ str (scoreText g) ]
         td [ _class "py-3" ] [ statusBadge g.Status ]
     ]
 

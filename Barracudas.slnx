@@ -1,0 +1,5 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/Barracudas.Web/Barracudas.Web.fsproj" />
+  </Folder>
+</Solution>

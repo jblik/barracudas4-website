@@ -25,11 +25,15 @@ let page (pollSeconds: int) (active: string) (pageTitle: string) (content: XmlNo
             meta [ _name "viewport"; _content "width=device-width, initial-scale=1" ]
             title [] [ str (sprintf "%s · Zürich Barracudas" pageTitle) ]
             link [ _rel "icon"; _type "image/png"; _href "/img/barracudas-logo.png" ]
+            // Bai Jamjuree — same typeface as swiss-baseball.ch.
+            link [ _rel "preconnect"; _href "https://fonts.googleapis.com" ]
+            link [ _rel "preconnect"; _href "https://fonts.gstatic.com"; KeyValue("crossorigin", "") ]
+            link [ _rel "stylesheet"; _href "https://fonts.googleapis.com/css2?family=Bai+Jamjuree:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400;1,600&display=swap" ]
             link [ _rel "stylesheet"; _href "/css/site.css" ]
             script [ _src "/js/htmx.min.js"; _defer ] []
         ]
         // Sticky footer: body is a min-height-screen flex column, <main> grows.
-        body [ _class "flex min-h-screen flex-col bg-gradient-to-b from-page to-page-2 text-ink antialiased" ] [
+        body [ _class "flex min-h-screen flex-col bg-gradient-to-b from-page to-page-2 font-sans text-ink antialiased" ] [
             // Live banner mount — polls /live and swaps in a scoreboard when a game is on.
             div [ _id "live-banner"
                   _hxGet "/live"

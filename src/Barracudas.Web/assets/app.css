@@ -19,14 +19,29 @@
   --row-hover: rgba(0, 56, 49, 0.05);
 }
 
+/* Dark values, shared by the explicit override and the device default below. */
+:root[data-theme="dark"] {
+  --page: #00211a;
+  --page-2: #003831;
+  --ink: #ecfdf5;
+  --ink-muted: rgba(167, 243, 208, 0.72);
+  --ink-strong: #ffffff;
+  --accent-text: #efb21e;            /* gold in dark mode */
+  --card: rgba(1, 92, 71, 0.55);
+  --card-ring: rgba(239, 178, 30, 0.30);
+  --line: rgba(10, 110, 84, 0.40);
+  --row-hover: rgba(1, 92, 71, 0.40);
+}
+
+/* Device default: dark unless the user has explicitly chosen a theme. */
 @media (prefers-color-scheme: dark) {
-  :root {
+  :root:not([data-theme]) {
     --page: #00211a;
     --page-2: #003831;
     --ink: #ecfdf5;
     --ink-muted: rgba(167, 243, 208, 0.72);
     --ink-strong: #ffffff;
-    --accent-text: #efb21e;          /* gold in dark mode */
+    --accent-text: #efb21e;
     --card: rgba(1, 92, 71, 0.55);
     --card-ring: rgba(239, 178, 30, 0.30);
     --line: rgba(10, 110, 84, 0.40);

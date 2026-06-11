@@ -8,7 +8,19 @@ open Barracudas.Web
 open Barracudas.Web.Domain
 open Barracudas.Web.EasyScore.Api
 
-/// Data access over EasyScore. One method per page concern.
+/// Result-level data access over EasyScore. The caching decorator sits on
+/// this interface so that failed fetches are never cached; only the outermost
+/// DegradingEasyScoreClient turns errors into empty data.
+type IEasyScoreSource =
+    abstract member GetSchedule: season: int -> Task<Result<Game list, EasyScoreError>>
+    abstract member GetStandings: unit -> Task<Result<Standing list, EasyScoreError>>
+    abstract member GetTeamStats: unit -> Task<Result<TeamStat list, EasyScoreError>>
+    abstract member GetPlayers: unit -> Task<Result<Player list, EasyScoreError>>
+    abstract member GetPlayerStats: id: string -> Task<Result<PlayerStats, EasyScoreError>>
+    abstract member GetLiveGame: unit -> Task<Result<LiveGame option, EasyScoreError>>
+
+/// Data access for the handlers. One method per page concern; errors already
+/// degraded to empty data.
 type IEasyScoreClient =
     /// Our games for the given season, ordered by date.
     abstract member GetSchedule: season: int -> Task<Game list>
@@ -25,10 +37,9 @@ type IEasyScoreClient =
     /// Current in-progress game, if any.
     abstract member GetLiveGame: unit -> Task<LiveGame option>
 
-/// IEasyScoreClient over the EasyScore v2 REST API. Composes the per-resource
-/// fetch classes (Api) with the DTO→domain converters (Convert); any failure
-/// is logged and surfaced as empty data so pages degrade gracefully.
-type EasyScoreApiClient(http: HttpClient, cfg: Config.AppConfig, logger: ILogger<EasyScoreApiClient>) =
+/// IEasyScoreSource over the EasyScore v2 REST API. Composes the per-resource
+/// fetch classes (Api) with the DTO→domain converters (Convert).
+type EasyScoreApiClient(http: HttpClient, cfg: Config.AppConfig) =
     let roundsApi = RoundsApi http
     let teamsApi = TeamsApi http
     let scheduleApi = ScheduleApi http
@@ -91,10 +102,37 @@ type EasyScoreApiClient(http: HttpClient, cfg: Config.AppConfig, logger: ILogger
             return! Convert.toPlayerStats playerId offense fielding pitching
         }
 
-    /// Run a pipeline; on error, log it and fall back to empty data.
-    let run (name: string) (empty: 'a) (work: Async<Result<'a, EasyScoreError>>) : Task<'a> =
+    let toTask (work: Async<Result<'a, EasyScoreError>>) = Async.StartImmediateAsTask work
+
+    interface IEasyScoreSource with
+        member _.GetSchedule season = toTask (ourGames season)
+
+        member _.GetStandings() = toTask (standings ())
+
+        member _.GetTeamStats() =
+            toTask (asyncResult {
+                let! table = standings ()
+                let! games = ourGames cfg.Season
+                return! Convert.toTeamStats table games
+            })
+
+        member _.GetPlayers() = toTask (roster ())
+
+        member _.GetPlayerStats id = toTask (playerStats id)
+
+        member _.GetLiveGame() =
+            toTask (asyncResult {
+                let! games = leagueGames cfg.Season
+                return! Convert.toLiveGame cfg.TeamId games
+            })
+
+/// IEasyScoreClient over an IEasyScoreSource: logs failures and degrades them
+/// to empty data so pages render. Sits above the cache, so failed responses
+/// reach the user as empty pages but are never cached.
+type DegradingEasyScoreClient(source: IEasyScoreSource, logger: ILogger<DegradingEasyScoreClient>) =
+    let orEmpty (name: string) (empty: 'a) (result: Task<Result<'a, EasyScoreError>>) : Task<'a> =
         task {
-            match! Async.StartImmediateAsTask work with
+            match! result with
             | Ok v -> return v
             | Error e ->
                 logger.LogWarning("EasyScore {Operation} failed: {Error}", name, EasyScoreError.describe e)
@@ -102,30 +140,22 @@ type EasyScoreApiClient(http: HttpClient, cfg: Config.AppConfig, logger: ILogger
         }
 
     interface IEasyScoreClient with
-        member _.GetSchedule season = run "GetSchedule" [] (ourGames season)
+        member _.GetSchedule season = orEmpty "GetSchedule" [] (source.GetSchedule season)
 
-        member _.GetStandings() = run "GetStandings" [] (standings ())
+        member _.GetStandings() = orEmpty "GetStandings" [] (source.GetStandings())
 
-        member _.GetTeamStats() =
-            run "GetTeamStats" [] (asyncResult {
-                let! table = standings ()
-                let! games = ourGames cfg.Season
-                return! Convert.toTeamStats table games
-            })
+        member _.GetTeamStats() = orEmpty "GetTeamStats" [] (source.GetTeamStats())
 
-        member _.GetPlayers() = run "GetPlayers" [] (roster ())
+        member _.GetPlayers() = orEmpty "GetPlayers" [] (source.GetPlayers())
 
-        member _.GetPlayer id =
-            run "GetPlayer" None (asyncResult {
-                let! players = roster ()
+        member this.GetPlayer id =
+            // Lookup into the roster (cached one layer down).
+            task {
+                let! players = (this :> IEasyScoreClient).GetPlayers()
                 return players |> List.tryFind (fun p -> p.Id = id)
-            })
+            }
 
         member _.GetPlayerStats id =
-            run "GetPlayerStats" { Batting = None; Fielding = None; Pitching = None } (playerStats id)
+            orEmpty "GetPlayerStats" { Batting = None; Fielding = None; Pitching = None } (source.GetPlayerStats id)
 
-        member _.GetLiveGame() =
-            run "GetLiveGame" None (asyncResult {
-                let! games = leagueGames cfg.Season
-                return! Convert.toLiveGame cfg.TeamId games
-            })
+        member _.GetLiveGame() = orEmpty "GetLiveGame" None (source.GetLiveGame())

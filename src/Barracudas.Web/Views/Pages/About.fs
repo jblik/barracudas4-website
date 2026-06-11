@@ -3,7 +3,7 @@ module Barracudas.Web.Views.Pages.About
 open Giraffe.ViewEngine
 open Barracudas.Web.Content
 open Barracudas.Web.Views.Components
-
+ 
 /// Location cell. When coordinates are present, hovering reveals an
 /// OpenStreetMap popover with a pin and a link to open the full map.
 let private locationCell (p: Practice) =

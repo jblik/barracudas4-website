@@ -22,7 +22,7 @@ RUN tailwindcss -i src/Barracudas.Web/assets/app.css \
                --minify
 
 RUN dotnet publish src/Barracudas.Web/Barracudas.Web.fsproj \
-    -c Release -o /publish --no-restore -r linux-x64 --self-contained false
+    -c Release -o /publish -r linux-x64 --self-contained false
 
 FROM mcr.microsoft.com/dotnet/aspnet:10.0
 WORKDIR /app

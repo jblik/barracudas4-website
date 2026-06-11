@@ -27,18 +27,26 @@ let table (games: Game list) : XmlNode =
             ]
         ]
 
+/// Selected tab is gold, the others green.
 let private tab (label: string) (key: string) (active: string) =
-    let activeCls = if key = active then "bg-barracuda-accent text-barracuda-dark shadow" else "bg-barracuda-light/60 text-emerald-100 ring-1 ring-barracuda-line hover:bg-barracuda-light"
+    let activeCls = if key = active then "bg-barracuda-accent text-barracuda-dark shadow" else "bg-barracuda-light text-white hover:bg-barracuda-line"
     button [ _class (sprintf "rounded-md px-3 py-1.5 text-sm font-bold uppercase tracking-wide transition-colors %s" activeCls)
              _hxGet (sprintf "/schedule/partial?tab=%s" key)
-             _hxTarget "#schedule-body"
-             _hxSwap "innerHTML" ] [ str label ]
+             _hxTarget "#schedule-content"
+             _hxSwap "outerHTML" ] [ str label ]
+
+/// Tabs + table together, so an HTMX swap re-renders the tab highlight too
+/// (also returned by /schedule/partial).
+let content (activeTab: string) (games: Game list) : XmlNode =
+    div [ _id "schedule-content" ] [
+        div [ _class "mb-6 flex gap-2" ] [
+            tab "Upcoming" "upcoming" activeTab
+            tab "Results" "past" activeTab
+            tab "All" "all" activeTab
+        ]
+        table games
+    ]
 
 let view (activeTab: string) (games: Game list) : XmlNode list =
     [ pageHeader "Schedule" (sprintf "%i season" System.DateTime.Now.Year)
-      div [ _class "mb-6 flex gap-2" ] [
-          tab "Upcoming" "upcoming" activeTab
-          tab "Results" "past" activeTab
-          tab "All" "all" activeTab
-      ]
-      div [ _id "schedule-body" ] [ table games ] ]
+      content activeTab games ]

@@ -3,11 +3,12 @@ module Barracudas.Web.Views.Layout
 open Giraffe.ViewEngine
 open Barracudas.Web.Views.Components
 
+/// Current page is gold, the others green — matching the schedule tabs.
 let private navLink (href: string) (label: string) (active: bool) =
     let baseCls = "block px-3 py-2 text-sm font-semibold rounded-md transition-colors"
     let cls =
         if active then baseCls + " bg-barracuda-accent text-barracuda-dark"
-        else baseCls + " text-emerald-100/80 hover:bg-barracuda-light hover:text-white"
+        else baseCls + " bg-barracuda-light text-white hover:bg-barracuda-line"
     a [ _href href; _class cls ] [ str label ]
 
 let private navLinks (active: string) : XmlNode list =

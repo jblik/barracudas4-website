@@ -49,17 +49,16 @@ let toGames (teamId: int) (dtos: GameDto list) : Async<Result<Game list, EasySco
         return
             [ for g in dtos do
                 if involves teamId g then
-                    let isHome = g.HomeTeam = teamId
                     let status = statusOf g
                     { Id = string g.ID
                       Date = gameDate g
-                      Opponent = (if isHome then g.AwayTeamName else g.HomeTeamName)
-                      IsHome = isHome
+                      Away = { Name = g.AwayTeamName; Logo = g.AwayLogo }
+                      Home = { Name = g.HomeTeamName; Logo = g.HomeLogo }
+                      IsHome = g.HomeTeam = teamId
                       Location = defaultArg g.Field ""
                       Status = status
-                      OurScore = (if status = Scheduled then None elif isHome then g.HomeRuns else g.AwayRuns)
-                      OpponentScore = (if status = Scheduled then None elif isHome then g.AwayRuns else g.HomeRuns)
-                      EasyScoreId = Some(string g.ID)
+                      AwayScore = (if status = Scheduled then None else g.AwayRuns)
+                      HomeScore = (if status = Scheduled then None else g.HomeRuns)
                       BoxScoreUrl =
                         if status = Final && g.BoxScoreGenerated = 1 then
                             Some(sprintf "https://www.easyscore.com/boxscores/%d" g.ID)
@@ -132,18 +131,11 @@ let toTeamStats (standings: Standing list) (ourGames: Game list) : Async<Result<
     }
 
 /// Our roster: licence entries for the given team name, minus the club's
-/// "Z-Lizenz" placeholder licences.
-let toRoster (teamName: string) (dtos: PlayerDto list) : Async<Result<Player list, EasyScoreError>> =
+/// "Z-Lizenz" placeholder licences. Batting averages come from the round's
+/// offensive stats (players without at-bats have no stats row).
+let toRoster (teamName: string) (dtos: PlayerDto list) (offense: OffenseStatsDto list) : Async<Result<Player list, EasyScoreError>> =
     asyncResult {
-        // DOB comes in two formats depending on record age.
-        let dob (s: string) =
-            match DateTime.TryParseExact(s, [| "yyyy-MM-dd"; "dd.MM.yyyy" |], inv, DateTimeStyles.None) with
-            | true, d -> Some d
-            | _ -> None
-        let age (d: DateTime) =
-            let today = DateTime.Today
-            let years = today.Year - d.Year
-            if d.Date > today.AddYears(-years) then years - 1 else years
+        let avgs = offense |> List.map (fun s -> s.PlayerID, s.BA) |> Map.ofList
         return
             [ for p in dtos do
                 let first = defaultArg p.Name ""
@@ -154,9 +146,78 @@ let toRoster (teamName: string) (dtos: PlayerDto list) : Async<Result<Player lis
                       Number = p.UniformNr |> Option.bind (fun n -> match Int32.TryParse n with | true, v -> Some v | _ -> None)
                       Bats = defaultArg p.Bats ""
                       Throws = defaultArg p.Throws ""
-                      Nationality = defaultArg p.Nationality ""
-                      Age = p.DateOfBirth |> Option.bind dob |> Option.map age } ]
+                      BattingAvg = avgs |> Map.tryFind p.ID } ]
             |> List.sortBy (fun p -> p.LastName, p.FirstName)
+    }
+
+/// A player's season stat lines, picked out of the round-wide stat lists.
+let toPlayerStats
+    (playerId: int)
+    (offense: OffenseStatsDto list)
+    (fielding: FieldingStatsDto list)
+    (pitching: PitchingStatsDto list)
+    : Async<Result<PlayerStats, EasyScoreError>> =
+    asyncResult {
+        let batting =
+            offense
+            |> List.tryFind (fun s -> s.PlayerID = playerId)
+            |> Option.map (fun s ->
+                { Games = s.G
+                  PA = s.PA
+                  AB = s.AB
+                  R = s.R
+                  H = s.H
+                  Doubles = s.Doubles
+                  Triples = s.Triples
+                  HR = s.HR
+                  RBI = s.RBI
+                  TB = s.TB
+                  BB = s.BB
+                  SO = s.SO
+                  HBP = s.HBP
+                  SB = s.SB
+                  CS = s.CS
+                  AVG = s.BA
+                  OBP = s.OBP
+                  SLG = s.SLG
+                  OPS = s.OPS })
+        let field =
+            fielding
+            |> List.tryFind (fun s -> s.PlayerID = playerId)
+            |> Option.map (fun s ->
+                { Games = s.G
+                  Innings = s.InningsPlayed
+                  Putouts = s.Putout
+                  Assists = s.Assist
+                  OutfieldAssists = s.OutfieldAssists
+                  Errors = s.Error
+                  DoublePlays = s.DP
+                  PassedBalls = s.PB
+                  StealAttempts = s.SBAtt
+                  CaughtStealing = s.CSMade
+                  RangeFactor = s.RangeFactor
+                  FieldingPct = s.FPct })
+        let pitch =
+            pitching
+            |> List.tryFind (fun s -> s.PlayerID = playerId)
+            |> Option.map (fun s ->
+                { Games = s.G
+                  Starts = s.GS
+                  IP = s.IP
+                  H = s.HA
+                  R = s.RA
+                  ER = s.ER
+                  BB = s.BBA
+                  SO = s.K
+                  HBP = s.HBPA
+                  WildPitches = s.WP
+                  Record = sprintf "%s–%s" s.W s.L
+                  Saves = s.SV
+                  BattersFaced = s.BF
+                  OppAVG = s.OppAVG
+                  WHIP = s.WHIP
+                  ERA = s.ERA })
+        return { Batting = batting; Fielding = field; Pitching = pitch }
     }
 
 /// The in-progress game involving us, if any.
@@ -166,8 +227,7 @@ let toLiveGame (teamId: int) (games: GameDto list) : Async<Result<LiveGame optio
             games
             |> List.tryFind (fun g -> inProgress g && involves teamId g)
             |> Option.map (fun g ->
-                let isHome = g.HomeTeam = teamId
                 { GameId = string g.ID
-                  Opponent = (if isHome then g.AwayTeamName else g.HomeTeamName)
-                  IsHome = isHome })
+                  AwayName = g.AwayTeamName
+                  HomeName = g.HomeTeamName })
     }

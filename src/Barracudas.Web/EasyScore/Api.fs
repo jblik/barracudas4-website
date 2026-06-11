@@ -67,3 +67,30 @@ type ScheduleApi(http: HttpClient) =
 type PlayersApi(http: HttpClient) =
     member _.ByUser(userId: string) : Async<Result<PlayerDto list, EasyScoreError>> =
         getJson http (sprintf "players?uid=%s" (System.Uri.EscapeDataString userId))
+
+/// The three stat categories the /stats endpoint serves (its `cat` parameter).
+type StatCategory =
+    | Offense
+    | Fielding
+    | Pitching
+
+module StatCategory =
+    let toQuery =
+        function
+        | Offense -> "off"
+        | Fielding -> "fld"
+        | Pitching -> "pit"
+
+/// Per-player season statistics of a round (one row per player with stats).
+type StatsApi(http: HttpClient) =
+    let path (cat: StatCategory) (year: int) (leagueId: int) (roundId: int) =
+        sprintf "stats?yr=%d&leagueID=%d&round=%d&cat=%s" year leagueId roundId (StatCategory.toQuery cat)
+
+    member _.Offense(year, leagueId, roundId) : Async<Result<OffenseStatsDto list, EasyScoreError>> =
+        getJson http (path Offense year leagueId roundId)
+
+    member _.Fielding(year, leagueId, roundId) : Async<Result<FieldingStatsDto list, EasyScoreError>> =
+        getJson http (path Fielding year leagueId roundId)
+
+    member _.Pitching(year, leagueId, roundId) : Async<Result<PitchingStatsDto list, EasyScoreError>> =
+        getJson http (path Pitching year leagueId roundId)

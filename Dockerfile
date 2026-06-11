@@ -13,7 +13,7 @@ RUN ARCH=$(uname -m) && \
     && chmod +x /usr/local/bin/tailwindcss
 
 COPY src/Barracudas.Web/Barracudas.Web.fsproj src/Barracudas.Web/
-RUN dotnet restore src/Barracudas.Web/Barracudas.Web.fsproj
+RUN dotnet restore src/Barracudas.Web/Barracudas.Web.fsproj -r linux-x64
 
 COPY . .
 

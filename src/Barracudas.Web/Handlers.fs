@@ -82,7 +82,8 @@ let live : HttpHandler =
             match lg, forced with
             | Some g, _ -> return! htmlView (Components.liveBanner g) next ctx
             | None, true ->
-                let demo = { Opponent = "Demo Opponent"; IsHome = true; OurScore = 3; OpponentScore = 2; Inning = 5; IsTop = false; Outs = 2 }
+                // Real completed game so the overlay iframe has data to show.
+                let demo = { GameId = "19313"; Opponent = "Demo Opponent"; IsHome = true }
                 return! htmlView (Components.liveBanner demo) next ctx
             | None, false -> return! htmlString "" next ctx
         }

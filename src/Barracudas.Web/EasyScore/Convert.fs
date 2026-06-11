@@ -39,8 +39,8 @@ let private involves (teamId: int) (g: GameDto) = g.AwayTeam = teamId || g.HomeT
 /// Pick our round (e.g. "1.Liga Baseball Ost 2026") out of the league's rounds.
 let findRound (nameFilter: string) (rounds: RoundDto list) : Async<Result<RoundDto, EasyScoreError>> =
     rounds
-    |> List.tryFind (fun r -> r.Round.Contains(nameFilter, StringComparison.OrdinalIgnoreCase))
-    |> Result.requireSome (ConvertError(sprintf "no round matching '%s' among %d rounds" nameFilter rounds.Length))
+    |> List.tryFind _.Round.Contains(nameFilter, StringComparison.OrdinalIgnoreCase)
+    |> Result.requireSome (ConvertError $"no round matching '%s{nameFilter}' among %d{rounds.Length} rounds")
     |> Async.singleton
 
 /// Our games from the round's full schedule, sorted by date.
@@ -61,7 +61,7 @@ let toGames (teamId: int) (dtos: GameDto list) : Async<Result<Game list, EasySco
                       HomeScore = (if status = Scheduled then None else g.HomeRuns)
                       BoxScoreUrl =
                         if status = Final && g.BoxScoreGenerated = 1 then
-                            Some(sprintf "https://www.easyscore.com/boxscores/%d" g.ID)
+                            Some $"https://www.easyscore.com/boxscores/%d{g.ID}"
                         else
                             None } ]
             |> List.sortBy _.Date
@@ -121,33 +121,32 @@ let toTeamStats (standings: Standing list) (ourGames: Game list) : Async<Result<
         return
             [ match standings |> List.tryFind _.IsUs with
               | Some s ->
-                  { Label = "Record"; Value = sprintf "%d–%d" s.Wins s.Losses }
+                  { Label = "Record"; Value = $"%d{s.Wins}–%d{s.Losses}" }
                   { Label = "Win %"; Value = (let p = s.Pct.ToString("0.000", inv) in if p.StartsWith "0" then p.Substring 1 else p) }
                   { Label = "Streak"; Value = s.Streak }
               | None -> ()
               { Label = "Runs Scored"; Value = string rs }
               { Label = "Runs Allowed"; Value = string ra }
-              { Label = "Run Diff"; Value = (if diff >= 0 then sprintf "+%d" diff else string diff) } ]
+              { Label = "Run Diff"; Value = (if diff >= 0 then $"+%d{diff}" else string diff) } ]
     }
 
-/// Our roster: licence entries for the given team name, minus the club's
-/// "Z-Lizenz" placeholder licences. Batting averages come from the round's
-/// offensive stats (players without at-bats have no stats row).
-let toRoster (teamName: string) (dtos: PlayerDto list) (offense: OffenseStatsDto list) : Async<Result<Player list, EasyScoreError>> =
+/// Our roster: the configured active-roster licences. Batting averages come
+/// from the round's offensive stats (players without at-bats have no stats row).
+let toRoster (activeRoster: int list) (dtos: PlayerDto list) (offense: OffenseStatsDto list) : Async<Result<Player list, EasyScoreError>> =
     asyncResult {
+        let active = Set.ofList activeRoster
         let avgs = offense |> List.map (fun s -> s.PlayerID, s.BA) |> Map.ofList
         return
             [ for p in dtos do
-                let first = defaultArg p.Name ""
-                if p.Team = Some teamName && not (first.StartsWith "Z-Lizenz") then
+                if active.Contains p.ID then
                     { Id = string p.ID
-                      FirstName = first
+                      FirstName = defaultArg p.Name ""
                       LastName = defaultArg p.Lastname ""
                       Number = p.UniformNr |> Option.bind (fun n -> match Int32.TryParse n with | true, v -> Some v | _ -> None)
                       Bats = defaultArg p.Bats ""
                       Throws = defaultArg p.Throws ""
                       BattingAvg = avgs |> Map.tryFind p.ID } ]
-            |> List.sortBy (fun p -> p.LastName, p.FirstName)
+            |> List.sortBy (fun p -> p.LastName.ToUpperInvariant(), p.FirstName.ToUpperInvariant())
     }
 
 /// A player's season stat lines, picked out of the round-wide stat lists.
@@ -211,7 +210,7 @@ let toPlayerStats
                   SO = s.K
                   HBP = s.HBPA
                   WildPitches = s.WP
-                  Record = sprintf "%s–%s" s.W s.L
+                  Record = $"%s{s.W}–%s{s.L}"
                   Saves = s.SV
                   BattersFaced = s.BF
                   OppAVG = s.OppAVG

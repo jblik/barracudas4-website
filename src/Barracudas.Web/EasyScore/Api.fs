@@ -16,9 +16,9 @@ type EasyScoreError =
 module EasyScoreError =
     let describe =
         function
-        | HttpError(status, path) -> sprintf "HTTP %d from %s" status path
-        | NetworkError(path, msg) -> sprintf "network error calling %s: %s" path msg
-        | DecodeError(path, msg) -> sprintf "could not decode %s: %s" path msg
+        | HttpError(status, path) -> $"HTTP %d{status} from %s{path}"
+        | NetworkError(path, msg) -> $"network error calling %s{path}: %s{msg}"
+        | DecodeError(path, msg) -> $"could not decode %s{path}: %s{msg}"
         | ConvertError msg -> msg
 
 let private jsonOptions =
@@ -51,22 +51,22 @@ let getJson<'T> (http: HttpClient) (path: string) : Async<Result<'T, EasyScoreEr
 /// Rounds (groups) of a league, e.g. Ost/Central/West of 1. Liga.
 type RoundsApi(http: HttpClient) =
     member _.ByLeague(leagueId: int) : Async<Result<RoundDto list, EasyScoreError>> =
-        getJson http (sprintf "rounds?byLeague=1&lg=%d" leagueId)
+        getJson http $"rounds?byLeague=1&lg=%d{leagueId}"
 
 /// Teams playing a given round.
 type TeamsApi(http: HttpClient) =
     member _.ByRound(roundId: int, leagueId: int, year: int) : Async<Result<TeamDto list, EasyScoreError>> =
-        getJson http (sprintf "teams?byRound=%d&lg=%d&yr=%d" roundId leagueId year)
+        getJson http $"teams?byRound=%d{roundId}&lg=%d{leagueId}&yr=%d{year}"
 
 /// Full game schedule of a round (all teams, results included once played).
 type ScheduleApi(http: HttpClient) =
     member _.ByRound(year: int, leagueId: int, roundId: int) : Async<Result<GameDto list, EasyScoreError>> =
-        getJson http (sprintf "schedule?yr=%d&lg=%d&rd=%d" year leagueId roundId)
+        getJson http $"schedule?yr=%d{year}&lg=%d{leagueId}&rd=%d{roundId}"
 
 /// Licensed players of the federation user (all teams; filter by Team name).
 type PlayersApi(http: HttpClient) =
     member _.ByUser(userId: string) : Async<Result<PlayerDto list, EasyScoreError>> =
-        getJson http (sprintf "players?uid=%s" (System.Uri.EscapeDataString userId))
+        getJson http $"players?uid=%s{System.Uri.EscapeDataString userId}"
 
 /// The three stat categories the /stats endpoint serves (its `cat` parameter).
 type StatCategory =
@@ -84,7 +84,7 @@ module StatCategory =
 /// Per-player season statistics of a round (one row per player with stats).
 type StatsApi(http: HttpClient) =
     let path (cat: StatCategory) (year: int) (leagueId: int) (roundId: int) =
-        sprintf "stats?yr=%d&leagueID=%d&round=%d&cat=%s" year leagueId roundId (StatCategory.toQuery cat)
+        $"stats?yr=%d{year}&leagueID=%d{leagueId}&round=%d{roundId}&cat=%s{StatCategory.toQuery cat}"
 
     member _.Offense(year, leagueId, roundId) : Async<Result<OffenseStatsDto list, EasyScoreError>> =
         getJson http (path Offense year leagueId roundId)

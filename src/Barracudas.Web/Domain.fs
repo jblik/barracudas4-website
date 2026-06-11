@@ -63,6 +63,8 @@ type Player =
       /// Season batting average, pre-formatted (".294"); None without at-bats.
       BattingAvg: string option }
     member p.Name = sprintf "%s %s" p.FirstName p.LastName
+    /// Roster-list form: "LASTNAME, First Name".
+    member p.ListName = sprintf "%s, %s" (p.LastName.ToUpperInvariant()) p.FirstName
 
 /// Season batting line (values pre-formatted by EasyScore).
 type BattingStats =

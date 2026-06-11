@@ -49,6 +49,11 @@
   }
 }
 
+/* Paint the canvas in the gradient's end color. Without this the body
+   gradient propagates to the canvas and repeats from its start color
+   past the root element's box (a color jump where the page ends). */
+html { background-color: var(--page-2); }
+
 @theme {
   /* Bai Jamjuree — the typeface used by swiss-baseball.ch. Sets the default
      sans font for the whole site (loaded from Google Fonts in the <head>). */

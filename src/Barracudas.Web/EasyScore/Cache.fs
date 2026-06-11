@@ -3,7 +3,6 @@ module Barracudas.Web.EasyScore.Cache
 open System
 open System.Threading.Tasks
 open Microsoft.Extensions.Caching.Memory
-open Barracudas.Web.Domain
 open Barracudas.Web.EasyScore.Client
 
 // Per-resource cache TTLs: reference data is cached for minutes, live for seconds.

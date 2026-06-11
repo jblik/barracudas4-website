@@ -6,6 +6,8 @@ on:
 jobs:
   docker:
     runs-on: docker
+    env:
+      DOCKER_HOST: tcp://127.0.0.1:2376
     steps:
       - name: Checkout
         uses: actions/checkout@v4

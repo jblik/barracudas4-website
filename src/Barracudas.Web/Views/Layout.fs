@@ -104,7 +104,6 @@ let page (pollSeconds: int) (active: string) (pageTitle: string) (content: XmlNo
                         span [ _class "font-bold text-barracuda-accent" ] [ str "Zürich Barracudas" ]
                         str " · 1. Liga · "
                         span [] [ str (string System.DateTime.Now.Year) ]
-                        str " — data via EasyScore"
                     ]
                     a [ _href "https://codeberg.org/jblik/barracudas-website"; _target "_blank"; _rel "noopener noreferrer"; _class "opacity-60 hover:opacity-100 transition-opacity" ] [
                         img [ _src "/img/codeberg-logo_icon_white.svg"; _alt "Codeberg"; _width "20"; _height "20" ]

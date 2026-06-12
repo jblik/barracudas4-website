@@ -42,3 +42,4 @@ docker run -p 8080:8080 -e EasyScore__ApiKey=<key> -e EasyScore__RequestUserId=<
 ```
 
 The multi-stage `Dockerfile` runs Tailwind and `dotnet publish` in the SDK image, then copies the output into a lean ASP.NET runtime image.
+

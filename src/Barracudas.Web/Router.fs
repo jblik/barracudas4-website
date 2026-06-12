@@ -12,6 +12,7 @@ let webApp : HttpHandler =
             route "/schedule/partial" >=> Handlers.schedulePartial
             route "/standings" >=> Handlers.standings
             route "/players" >=> Handlers.players
+            route "/players/partial" >=> Handlers.playersPartial
             routef "/players/%s" Handlers.player
             route "/live" >=> Handlers.live
             route "/healthz" >=> text "ok"

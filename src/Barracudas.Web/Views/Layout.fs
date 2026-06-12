@@ -49,7 +49,7 @@ let page (pollSeconds: int) (active: string) (pageTitle: string) (content: XmlNo
             meta [ _charset "utf-8" ]
             meta [ _name "viewport"; _content "width=device-width, initial-scale=1" ]
             script [] [ rawText earlyThemeScript ]
-            title [] [ str (sprintf "%s · Zürich Barracudas" pageTitle) ]
+            title [] [ str $"%s{pageTitle} · Zürich Barracudas" ]
             link [ _rel "icon"; _type "image/png"; _href "/img/barracudas-logo.png" ]
             // Bai Jamjuree — same typeface as swiss-baseball.ch.
             link [ _rel "preconnect"; _href "https://fonts.googleapis.com" ]
@@ -63,7 +63,7 @@ let page (pollSeconds: int) (active: string) (pageTitle: string) (content: XmlNo
             // Live banner mount — polls /live and swaps in a scoreboard when a game is on.
             div [ _id "live-banner"
                   _hxGet "/live"
-                  _hxTrigger (sprintf "load, every %ds" pollSeconds)
+                  _hxTrigger $"load, every %d{pollSeconds}s"
                   _hxSwap "innerHTML" ] []
 
             nav [ _class "border-b-2 border-barracuda-accent bg-barracuda shadow-lg shadow-black/30" ] [

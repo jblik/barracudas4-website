@@ -22,7 +22,7 @@ type Game =
       /// Scores (None until the game has data).
       AwayScore: int option
       HomeScore: int option
-      /// Box score URL for a completed game (EasyScore), when available.
+      /// On-site box score URL ("/boxscore/{id}") for a completed game, when available.
       BoxScoreUrl: string option }
     /// Barracudas score for this game, when known.
     member g.OurScore = if g.IsHome then g.HomeScore else g.AwayScore
@@ -207,6 +207,92 @@ type PlayerStats =
       BattingLog: BattingLogEntry list
       FieldingLog: FieldingLogEntry list
       PitchingLog: PitchingLogEntry list }
+
+/// One team's row in the inning-by-inning linescore.
+type LineScoreTeam =
+    { Name: string
+      Abbr: string
+      Logo: string option
+      /// Runs scored in each inning, in order ("x" when a side didn't bat).
+      Innings: string list
+      Runs: int
+      Hits: int
+      Errors: int }
+
+/// The inning-by-inning linescore grid (R/H/E totals per side).
+type LineScore =
+    { Innings: int
+      Away: LineScoreTeam
+      Home: LineScoreTeam }
+
+/// One batter's line in a box score. The team totals row has Order = None.
+type BoxBatter =
+    { /// Batting-order spot (None for the totals row).
+      Order: int option
+      /// True for a substitute (indented under the player they replaced).
+      IsSub: bool
+      Pos: string
+      /// "Lastname Firstname", as scored.
+      Name: string
+      AB: int
+      R: int
+      H: int
+      RBI: int
+      BB: int
+      SO: int
+      LOB: int
+      /// Season batting average through this game ("" → no at-bats yet).
+      Avg: string }
+
+/// One pitcher's line in a box score.
+type BoxPitcher =
+    { /// "Lastname Firstname", with any decision, e.g. "Würsten Samuel (L, 0-1)".
+      Name: string
+      /// True for the team totals row.
+      IsTotals: bool
+      IP: string
+      H: int
+      R: int
+      ER: int
+      BB: int
+      SO: int
+      HR: int
+      BattersFaced: int
+      Pitches: int
+      Strikes: int
+      /// Season ERA through this game.
+      ERA: string }
+
+/// One side's batting + pitching lines in a box score. Batters end with the
+/// team totals row (Order = None).
+type BoxTeam =
+    { Name: string
+      Abbr: string
+      Logo: string option
+      /// True for our own team (highlighted).
+      IsUs: bool
+      Batters: BoxBatter list
+      Pitchers: BoxPitcher list }
+
+/// A labelled game note (e.g. "HR", "2B", "E") with the away/home detail text.
+type BoxNote =
+    { Label: string
+      Away: string option
+      Home: string option }
+
+/// A completed game's full box score (header + linescore + both teams + notes).
+type BoxScore =
+    { GameId: string
+      Date: DateTime
+      Location: string
+      Round: string
+      Umpires: string
+      Scorer: string
+      LineScore: LineScore option
+      Away: BoxTeam
+      Home: BoxTeam
+      /// Game notes (doubles, home runs, errors, …); empty entries omitted.
+      Notes: BoxNote list }
 
 /// In-progress game for the live banner (rendered via the EasyScore
 /// linescore overlay, https://www.easyscore.com/overlays/linescores/{id}).

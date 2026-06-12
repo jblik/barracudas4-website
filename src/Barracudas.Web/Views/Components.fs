@@ -56,19 +56,19 @@ let matchup (g: Game) =
         teamLabel g.Home g.IsHome
     ]
 
-/// One row in a schedule list. Completed games link to their EasyScore box score.
+/// One row in a schedule list. Completed games link to their box score page.
 let gameRow (g: Game) =
     let baseCls = "border-b border-line transition-colors hover:bg-row-hover"
     let rowAttrs =
         match g.BoxScoreUrl with
         | Some url ->
             [ _class (baseCls + " cursor-pointer")
-              KeyValue("onclick", sprintf "window.open('%s','_blank','noopener')" url)
-              _title "View box score on EasyScore" ]
+              KeyValue("onclick", sprintf "window.location='%s'" url)
+              _title "View box score" ]
         | None -> [ _class baseCls ]
     let score =
         match g.BoxScoreUrl with
-        | Some _ -> sprintf "%s ↗" (scoreText g)
+        | Some _ -> sprintf "%s →" (scoreText g)
         | None -> scoreText g
     tr rowAttrs [
         td [ _class "py-3 pr-4 text-ink-muted whitespace-nowrap" ] [ str (g.Date.ToString "ddd, MMM d") ]

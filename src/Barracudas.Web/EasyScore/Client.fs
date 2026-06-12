@@ -17,6 +17,7 @@ type IEasyScoreSource =
     abstract member GetTeamStats: unit -> Task<Result<TeamStat list, EasyScoreError>>
     abstract member GetPlayers: unit -> Task<Result<Player list, EasyScoreError>>
     abstract member GetPlayerStats: id: string -> Task<Result<PlayerStats, EasyScoreError>>
+    abstract member GetBoxScore: gameId: string -> Task<Result<BoxScore option, EasyScoreError>>
     abstract member GetLiveGame: unit -> Task<Result<LiveGame option, EasyScoreError>>
 
 /// Data access for the handlers. One method per page concern; errors already
@@ -34,6 +35,8 @@ type IEasyScoreClient =
     abstract member GetPlayer: id: string -> Task<Player option>
     /// Season batting/fielding/pitching lines of a player.
     abstract member GetPlayerStats: id: string -> Task<PlayerStats>
+    /// A completed game's box score (None when no box score is available).
+    abstract member GetBoxScore: gameId: string -> Task<BoxScore option>
     /// Current in-progress game, if any.
     abstract member GetLiveGame: unit -> Task<LiveGame option>
 
@@ -45,6 +48,7 @@ type EasyScoreApiClient(http: HttpClient, cfg: Config.AppConfig) =
     let scheduleApi = ScheduleApi http
     let playersApi = PlayersApi http
     let statsApi = StatsApi http
+    let gamesApi = GamesApi http
 
     /// Our round id (1. Liga Ost), resolved from the league's rounds.
     let roundId () =
@@ -105,6 +109,18 @@ type EasyScoreApiClient(http: HttpClient, cfg: Config.AppConfig) =
             return! Convert.toPlayerStats playerId offense fielding pitching battingLog fieldingLog pitchingLog
         }
 
+    /// A completed game's box score: linescore from /games, lines from /stats?box.
+    let boxScore (id: string) =
+        asyncResult {
+            let! gameId =
+                match System.Int32.TryParse id with
+                | true, v -> Ok v
+                | _ -> Error(ConvertError $"invalid game id '%s{id}'")
+            let! detail = gamesApi.ById gameId
+            let! box = statsApi.BoxScore gameId
+            return! Convert.toBoxScore cfg.TeamId gameId detail box
+        }
+
     let toTask (work: Async<Result<'a, EasyScoreError>>) = Async.StartImmediateAsTask work
 
     interface IEasyScoreSource with
@@ -122,6 +138,8 @@ type EasyScoreApiClient(http: HttpClient, cfg: Config.AppConfig) =
         member _.GetPlayers() = toTask (roster ())
 
         member _.GetPlayerStats id = toTask (playerStats id)
+
+        member _.GetBoxScore id = toTask (boxScore id)
 
         member _.GetLiveGame() =
             toTask (asyncResult {
@@ -167,5 +185,7 @@ type DegradingEasyScoreClient(source: IEasyScoreSource, logger: ILogger<Degradin
                   FieldingLog = []
                   PitchingLog = [] }
             orEmpty "GetPlayerStats" empty (source.GetPlayerStats id)
+
+        member _.GetBoxScore id = orEmpty "GetBoxScore" None (source.GetBoxScore id)
 
         member _.GetLiveGame() = orEmpty "GetLiveGame" None (source.GetLiveGame())

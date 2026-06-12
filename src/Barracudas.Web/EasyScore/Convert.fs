@@ -2,6 +2,7 @@ module Barracudas.Web.EasyScore.Convert
 
 open System
 open System.Globalization
+open System.Text.Json
 open FsToolkit.ErrorHandling
 open Barracudas.Web.Domain
 open Barracudas.Web.EasyScore.Dto
@@ -61,7 +62,7 @@ let toGames (teamId: int) (dtos: GameDto list) : Async<Result<Game list, EasySco
                       HomeScore = (if status = Scheduled then None else g.HomeRuns)
                       BoxScoreUrl =
                         if status = Final && g.BoxScoreGenerated = 1 then
-                            Some $"https://www.easyscore.com/boxscores/%d{g.ID}"
+                            Some $"/boxscore/%d{g.ID}"
                         else
                             None } ]
             |> List.sortBy _.Date
@@ -294,6 +295,123 @@ let toPlayerStats
               BattingLog = batLog
               FieldingLog = fldLog
               PitchingLog = pitLog }
+    }
+
+let private blankToNone (s: string) = if String.IsNullOrWhiteSpace s then None else Some s
+
+/// A linescore cell is a run count (number) or "x" (a side that didn't bat).
+let private lineCell (e: JsonElement) =
+    match e.ValueKind with
+    | JsonValueKind.Number -> string (e.GetInt32())
+    | JsonValueKind.String -> e.GetString()
+    | _ -> ""
+
+let private toLineTeam (s: LineScoreSideDto) (innings: int) : LineScoreTeam =
+    { Name = s.team
+      Abbr = s.abbr
+      Logo = s.logo |> Option.bind blankToNone
+      Innings = [ for i in 1..innings -> s.line |> Map.tryFind (string i) |> Option.map lineCell |> Option.defaultValue "" ]
+      Runs = s.totals.R
+      Hits = s.totals.H
+      Errors = s.totals.E }
+
+let private toBatter (h: BoxHitterDto) : BoxBatter =
+    { Order = (if h.Spot = 100 then None else Some h.Spot)
+      IsSub = h.SubbedIn |> Option.bind blankToNone |> Option.isSome
+      Pos = h.Pos
+      Name = h.playerName
+      AB = h.AB
+      R = h.R
+      H = h.H
+      RBI = h.RBI
+      BB = h.BB
+      SO = h.SO
+      LOB = h.LOB
+      Avg = defaultArg h.BA "" }
+
+let private toPitcher (p: BoxPitcherDto) : BoxPitcher =
+    let isTotals = p.PitcherNr = 100
+    { Name = (if isTotals then "Totals" else p.playerName)
+      IsTotals = isTotals
+      IP = p.IP
+      H = p.HA
+      R = p.RA
+      ER = p.ER
+      BB = p.BBA
+      SO = p.K
+      HR = p.HRA
+      BattersFaced = p.BF
+      Pitches = p.PitchCount
+      Strikes = p.Strikes
+      ERA = p.ERA }
+
+/// Build a game note (away = T, home = B); None when neither side has text.
+let private boxNote (label: string) (d: BoxNoteDto option) : BoxNote option =
+    match d with
+    | Some n ->
+        let away = n.T |> Option.bind blankToNone
+        let home = n.B |> Option.bind blankToNone
+        if away.IsSome || home.IsSome then Some { Label = label; Away = away; Home = home } else None
+    | None -> None
+
+/// A completed game's box score: linescore from /games, the rest from /stats?box.
+let toBoxScore
+    (teamId: int)
+    (gameId: int)
+    (detail: GameDetailDto list)
+    (response: BoxScoreResponseDto list)
+    : Async<Result<BoxScore option, EasyScoreError>> =
+    asyncResult {
+        match response |> List.tryHead |> Option.map _.BoxScores with
+        | None -> return None
+        | Some b ->
+            let head = detail |> List.tryHead
+            let awayIsUs = head |> Option.map (fun d -> d.AwayTeam = teamId) |> Option.defaultValue false
+            let homeIsUs = head |> Option.map (fun d -> d.HomeTeam = teamId) |> Option.defaultValue false
+            let side (s: string) = [ for h in b.AllHitters do if h.TopOrBot = s then h ]
+            let pitchers (s: string) = [ for p in b.AllPitchers do if p.TopOrBot = s then toPitcher p ]
+            let lineScore =
+                head
+                |> Option.bind (fun d -> d.LineScore |> List.tryHead)
+                |> Option.map (fun ls ->
+                    let n = match Int32.TryParse ls.innings with | true, v -> v | _ -> List.max [ ls.away.line.Count; ls.home.line.Count; 1 ]
+                    { Innings = n
+                      Away = toLineTeam ls.away n
+                      Home = toLineTeam ls.home n })
+            let team name abbr logo isUs hitters pits : BoxTeam =
+                { Name = name
+                  Abbr = abbr
+                  Logo = logo |> Option.bind blankToNone
+                  IsUs = isUs
+                  Batters = hitters |> List.map toBatter
+                  Pitchers = pits }
+            let notes =
+                [ boxNote "2B" b.AdditionalBatting2B
+                  boxNote "3B" b.AdditionalBatting3B
+                  boxNote "HR" b.AdditionalBattingHR
+                  boxNote "SF" b.AdditionalBattingSF
+                  boxNote "GIDP" b.AdditionalBattingGIDP
+                  boxNote "SB" b.AdditionalBaserunningSB
+                  boxNote "CS" b.AdditionalBaserunningCS
+                  boxNote "E" b.AdditionalFieldingError
+                  boxNote "DP" b.AdditionalFieldingDPs
+                  boxNote "PB" b.AdditionalFieldingPB
+                  boxNote "WP" b.AdditionalPitchingWP
+                  boxNote "HBP" b.AdditionalPitchingHBP
+                  boxNote "BK" b.AdditionalPitchingBalk ]
+                |> List.choose id
+            return
+                Some
+                    { GameId = string gameId
+                      Date = logDate b.GameInfo.Date
+                      Location = b.GameInfo.Misc.Field
+                      Round = b.GameInfo.Round
+                      Umpires = b.GameInfo.Misc.Umpires
+                      Scorer = b.GameInfo.Misc.Scorer
+                      LineScore = lineScore
+                      Away = team b.AwayTeam b.AwayTeamAbbr b.AwayTeamLogo awayIsUs (side "T") (pitchers "T")
+                      Home = team b.HomeTeam b.HomeTeamAbbr b.HomeTeamLogo homeIsUs (side "B") (pitchers "B")
+                      Notes = notes }
     }
 
 /// The in-progress game involving us, if any.

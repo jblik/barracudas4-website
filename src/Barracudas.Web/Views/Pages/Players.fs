@@ -277,7 +277,7 @@ let private battingLogTable (rows: BattingLogEntry list) =
           "GIDP", "Grounded into Double Plays", _.GIDP
           "2-out RBI", "Two-Out Runs Batted In", _.TwoOutRBI
           "RISP", "Hits with Runners in Scoring Position", _.RISP
-          "GSc", "Game Score", _.GameScore
+          "GSc", "Formula:\n59 + Hits + Runs + .25*Walks + .25*HitByPitch + TotalBases + .25*StolenBases - .25*CaughtStealing + .25*SacFlies + .25*SacHits + RBIs - .25*Strikeouts - .25*Outs", _.GameScore
           "AVG*", "Batting Average (season to date)", _.AvgToDate ]
         rows
 
@@ -320,7 +320,7 @@ let private pitchingLogTable (rows: PitchingLogEntry list) =
           "#Pit", "Pitches Thrown", _.Pitches
           "Dec", "Decision (Win/Loss/Save)", _.Decision
           "Rel", "Relief Decision (Hold/Blown Save)", _.Relief
-          "GSc", "Game Score", _.GameScore
+          "GSc", "Formula:\n50 + 1 point for each out recorded + 2 points for each inning completed after the 4th + 1 point for each strikeout - 2 points for each hit allowed - 4 points for each earned run allowed - 2 points for each unearned run allowed - 1 point for each walk.", _.GameScore
           "WHIP*", "Walks and Hits per Inning Pitched (season to date)", _.WhipToDate
           "ERA*", "Earned Run Average (season to date)", _.EraToDate ]
         rows

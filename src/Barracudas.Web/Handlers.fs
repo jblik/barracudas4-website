@@ -79,6 +79,15 @@ let player (id: string) : HttpHandler =
             | None -> return! (setStatusCode 404 >=> text "Player not found") next ctx
         }
 
+let boxScore (id: string) : HttpHandler =
+    fun next ctx ->
+        task {
+            let! bs = (client ctx).GetBoxScore id
+            match bs with
+            | Some b -> return! renderPage "schedule" "Box Score" ctx (Pages.BoxScore.view b) next ctx
+            | None -> return! (setStatusCode 404 >=> text "Box score not found") next ctx
+        }
+
 /// HTMX partial polled by the live banner. Returns the scoreboard markup when a
 /// game is in progress, otherwise empty. In Development, ?forceLive=1 forces a
 /// demo banner so the feature can be verified without a real live game.

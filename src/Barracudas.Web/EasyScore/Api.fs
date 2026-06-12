@@ -68,6 +68,11 @@ type PlayersApi(http: HttpClient) =
     member _.ByUser(userId: string) : Async<Result<PlayerDto list, EasyScoreError>> =
         getJson http $"players?uid=%s{System.Uri.EscapeDataString userId}"
 
+/// A single game by id, including its linescore grid (used for box scores).
+type GamesApi(http: HttpClient) =
+    member _.ById(gameId: int) : Async<Result<GameDetailDto list, EasyScoreError>> =
+        getJson http $"games?id=%d{gameId}&byYear=0&yr=0&lg=0&rd=0&isAdmin=0&byUser=0&idLive=0&getLive=0&includeAll=0"
+
 /// The three stat categories the /stats endpoint serves (its `cat` parameter).
 type StatCategory =
     | Offense
@@ -94,6 +99,10 @@ type StatsApi(http: HttpClient) =
 
     member _.Pitching(year, leagueId, roundId) : Async<Result<PitchingStatsDto list, EasyScoreError>> =
         getJson http (path Pitching year leagueId roundId)
+
+    /// One game's full box score (batting/pitching lines + game notes).
+    member _.BoxScore(gameId: int) : Async<Result<BoxScoreResponseDto list, EasyScoreError>> =
+        getJson http $"stats?box=%d{gameId}&pitchersOnly=0&forLiveGameCast=0&endGame=0"
 
     /// One player's per-game log of a category (subCategory=log).
     member private _.Log<'T>(cat, year, leagueId, roundId, playerId: int) : Async<Result<'T list, EasyScoreError>> =

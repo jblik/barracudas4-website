@@ -317,6 +317,7 @@ let private toLineTeam (s: LineScoreSideDto) (innings: int) : LineScoreTeam =
 
 let private toBatter (h: BoxHitterDto) : BoxBatter =
     { Order = (if h.Spot = 100 then None else Some h.Spot)
+      PlayerId = (if h.Spot = 100 || h.playerID = 0 then None else Some h.playerID)
       IsSub = h.SubbedIn |> Option.bind blankToNone |> Option.isSome
       Pos = h.Pos
       Name = h.playerName
@@ -358,6 +359,7 @@ let private boxNote (label: string) (d: BoxNoteDto option) : BoxNote option =
 let toBoxScore
     (teamId: int)
     (gameId: int)
+    (opponentColor: string option)
     (detail: GameDetailDto list)
     (response: BoxScoreResponseDto list)
     : Async<Result<BoxScore option, EasyScoreError>> =
@@ -383,6 +385,7 @@ let toBoxScore
                   Abbr = abbr
                   Logo = logo |> Option.bind blankToNone
                   IsUs = isUs
+                  Color = (if isUs then None else opponentColor)
                   Batters = hitters |> List.map toBatter
                   Pitchers = pits }
             let notes =

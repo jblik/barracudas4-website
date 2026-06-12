@@ -58,6 +58,10 @@ type TeamsApi(http: HttpClient) =
     member _.ByRound(roundId: int, leagueId: int, year: int) : Async<Result<TeamDto list, EasyScoreError>> =
         getJson http $"teams?byRound=%d{roundId}&lg=%d{leagueId}&yr=%d{year}"
 
+    /// Full record of a single team (carries the brand colour).
+    member _.ById(teamId: int) : Async<Result<TeamDetailDto list, EasyScoreError>> =
+        getJson http $"teams?id=%d{teamId}"
+
 /// Full game schedule of a round (all teams, results included once played).
 type ScheduleApi(http: HttpClient) =
     member _.ByRound(year: int, leagueId: int, roundId: int) : Async<Result<GameDto list, EasyScoreError>> =

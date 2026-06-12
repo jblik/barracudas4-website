@@ -16,6 +16,12 @@ type TeamDto =
     { Team: int
       Name: string }
 
+/// GET /teams?id={teamId} — full team record (only the brand colour is used).
+type TeamDetailDto =
+    { ID: int
+      Name: string
+      MainColor: string option }
+
 /// GET /schedule?yr={year}&lg={leagueId}&rd={roundId}
 type GameDto =
     { ID: int
@@ -217,6 +223,7 @@ type BoxHitterDto =
       SubbedIn: string option
       TopOrBot: string
       Pos: string
+      playerID: int
       playerName: string
       AB: int
       R: int

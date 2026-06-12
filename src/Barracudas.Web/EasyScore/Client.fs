@@ -118,7 +118,22 @@ type EasyScoreApiClient(http: HttpClient, cfg: Config.AppConfig) =
                 | _ -> Error(ConvertError $"invalid game id '%s{id}'")
             let! detail = gamesApi.ById gameId
             let! box = statsApi.BoxScore gameId
-            return! Convert.toBoxScore cfg.TeamId gameId detail box
+            // Opponent's brand colour tints their game notes; a failed/empty
+            // colour fetch must not sink the whole box score.
+            let opponentId =
+                detail
+                |> List.tryHead
+                |> Option.map (fun d -> if d.AwayTeam = cfg.TeamId then d.HomeTeam else d.AwayTeam)
+            let! opponentColor =
+                match opponentId with
+                | Some oid ->
+                    async {
+                        match! teamsApi.ById oid with
+                        | Ok ts -> return Ok(ts |> List.tryHead |> Option.bind (fun t -> t.MainColor) |> Option.filter (fun c -> c <> ""))
+                        | Error _ -> return Ok None
+                    }
+                | None -> async { return Ok None }
+            return! Convert.toBoxScore cfg.TeamId gameId opponentColor detail box
         }
 
     let toTask (work: Async<Result<'a, EasyScoreError>>) = Async.StartImmediateAsTask work

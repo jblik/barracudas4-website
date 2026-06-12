@@ -229,6 +229,8 @@ type LineScore =
 type BoxBatter =
     { /// Batting-order spot (None for the totals row).
       Order: int option
+      /// EasyScore player id, for the player page link (None for the totals row).
+      PlayerId: int option
       /// True for a substitute (indented under the player they replaced).
       IsSub: bool
       Pos: string
@@ -271,6 +273,8 @@ type BoxTeam =
       Logo: string option
       /// True for our own team (highlighted).
       IsUs: bool
+      /// Brand colour from /teams (used to tint the opponent's notes; None for us).
+      Color: string option
       Batters: BoxBatter list
       Pitchers: BoxPitcher list }
 

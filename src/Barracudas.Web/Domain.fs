@@ -122,12 +122,91 @@ type PitchingStats =
       WHIP: string
       ERA: string }
 
+/// One game's batting line from the player's game log (newest first).
+type BattingLogEntry =
+    { Date: DateTime
+      Opponent: string
+      /// Batting-order spot, e.g. "4".
+      Spot: string
+      /// Positions played, e.g. "DH,P,SS".
+      Pos: string
+      AB: string
+      R: string
+      H: string
+      Doubles: string
+      Triples: string
+      HR: string
+      RBI: string
+      BB: string
+      SO: string
+      SB: string
+      CS: string
+      HBP: string
+      Sac: string
+      SacFlies: string
+      GIDP: string
+      TwoOutRBI: string
+      /// Hits with runners in scoring position, e.g. "1/3".
+      RISP: string
+      GameScore: string
+      /// Season batting average through this game.
+      AvgToDate: string }
+
+/// One game's fielding line from the player's game log (newest first).
+type FieldingLogEntry =
+    { Date: DateTime
+      Opponent: string
+      Pos: string
+      Innings: string
+      Putouts: string
+      Assists: string
+      OutfieldAssists: string
+      Errors: string
+      DoublePlays: string
+      PassedBalls: string
+      StealAttempts: string
+      CaughtStealing: string
+      /// Season range factor through this game.
+      RangeFactorToDate: string
+      /// Season fielding percentage through this game.
+      FieldingPctToDate: string }
+
+/// One game's pitching line from the player's game log (newest first).
+type PitchingLogEntry =
+    { Date: DateTime
+      Opponent: string
+      IP: string
+      H: string
+      R: string
+      ER: string
+      BB: string
+      SO: string
+      HBP: string
+      WildPitches: string
+      Balks: string
+      GroundBalls: string
+      FlyBalls: string
+      BattersFaced: string
+      Pitches: string
+      /// Decision, e.g. "W", "L", "SV" or "--".
+      Decision: string
+      /// Relief decision (hold/blown save) or "--".
+      Relief: string
+      GameScore: string
+      /// Season WHIP through this game.
+      WhipToDate: string
+      /// Season ERA through this game.
+      EraToDate: string }
+
 /// All season stats of one player; a section is None when the player has no
-/// appearances in that category.
+/// appearances in that category. The logs hold one entry per game, newest first.
 type PlayerStats =
     { Batting: BattingStats option
       Fielding: FieldingStats option
-      Pitching: PitchingStats option }
+      Pitching: PitchingStats option
+      BattingLog: BattingLogEntry list
+      FieldingLog: FieldingLogEntry list
+      PitchingLog: PitchingLogEntry list }
 
 /// In-progress game for the live banner (rendered via the EasyScore
 /// linescore overlay, https://www.easyscore.com/overlays/linescores/{id}).

@@ -220,6 +220,111 @@ let private pitchingTable (s: PitchingStats) =
           "WHIP", "Walks and Hits per Inning Pitched", s.WHIP
           "ERA", "Earned Run Average", s.ERA ]
 
+/// A titled per-game log table in the same style as statTable; each column is
+/// (abbreviation, full stat name, cell value) — the full name shows as a hover
+/// tooltip on the header and every cell. Columns marked * are season-to-date.
+let private logTable (title: string) (columns: (string * string * ('row -> string)) list) (rows: 'row list) =
+    section
+        [ _class "mt-8" ]
+        [ h2 [ _class "mb-3 text-lg font-black uppercase tracking-tight text-ink-strong" ] [ str title ]
+          div
+              [ _class "overflow-x-auto rounded-lg bg-card ring-1 ring-card-ring" ]
+              [ table
+                    [ _class "w-full text-center text-sm" ]
+                    [ thead
+                          [ _class
+                                "border-b border-barracuda-accent/40 text-xs font-bold uppercase tracking-wider text-accent-text" ]
+                          [ tr
+                                []
+                                [ for label, full, _ in columns ->
+                                      th [ _class "cursor-help px-3 py-2"; _title full ] [ str label ] ] ]
+                      tbody
+                          []
+                          [ for row in rows ->
+                                tr
+                                    [ _class
+                                          "border-b border-line transition-colors last:border-0 hover:bg-row-hover" ]
+                                    [ for _, full, value in columns ->
+                                          td
+                                              [ _class "whitespace-nowrap px-3 py-2 font-semibold text-ink-strong"
+                                                _title full ]
+                                              [ str (value row) ] ] ] ] ] ]
+
+[<Literal>]
+let dateformat = "ddd, MMM d"
+
+let private battingLogTable (rows: BattingLogEntry list) =
+    logTable
+        "Batting Game Log"
+        [ "Date", "Game Date", fun (e: BattingLogEntry) -> e.Date.ToString(dateformat)
+          "Opponent", "Opponent", _.Opponent
+          "Spot", "Batting Order Spot", _.Spot
+          "Pos", "Positions Played", _.Pos
+          "AB", "At Bats", _.AB
+          "R", "Runs", _.R
+          "H", "Hits", _.H
+          "2B", "Doubles", _.Doubles
+          "3B", "Triples", _.Triples
+          "HR", "Home Runs", _.HR
+          "RBI", "Runs Batted In", _.RBI
+          "BB", "Walks (Base on Balls)", _.BB
+          "SO", "Strikeouts", _.SO
+          "SB", "Stolen Bases", _.SB
+          "CS", "Caught Stealing", _.CS
+          "HBP", "Hit by Pitch", _.HBP
+          "S", "Sacrifice Bunts", _.Sac
+          "SF", "Sacrifice Flies", _.SacFlies
+          "GIDP", "Grounded into Double Plays", _.GIDP
+          "2-out RBI", "Two-Out Runs Batted In", _.TwoOutRBI
+          "RISP", "Hits with Runners in Scoring Position", _.RISP
+          "GSc", "Game Score", _.GameScore
+          "AVG*", "Batting Average (season to date)", _.AvgToDate ]
+        rows
+
+let private fieldingLogTable (rows: FieldingLogEntry list) =
+    logTable
+        "Fielding Game Log"
+        [ "Date", "Game Date", fun (e: FieldingLogEntry) -> e.Date.ToString dateformat
+          "Opponent", "Opponent", _.Opponent
+          "Pos", "Positions Played", _.Pos
+          "IP", "Innings Played", _.Innings
+          "PO", "Putouts", _.Putouts
+          "A", "Assists", _.Assists
+          "OA", "Outfield Assists", _.OutfieldAssists
+          "E", "Errors", _.Errors
+          "DP", "Double Plays", _.DoublePlays
+          "PB", "Passed Balls", _.PassedBalls
+          "SB Att", "Stolen Base Attempts", _.StealAttempts
+          "CS", "Caught Stealing", _.CaughtStealing
+          "RF*", "Range Factor (season to date)", _.RangeFactorToDate
+          "FPCT*", "Fielding Percentage (season to date)", _.FieldingPctToDate ]
+        rows
+
+let private pitchingLogTable (rows: PitchingLogEntry list) =
+    logTable
+        "Pitching Game Log"
+        [ "Date", "Game Date", fun (e: PitchingLogEntry) -> e.Date.ToString dateformat
+          "Opponent", "Opponent", _.Opponent
+          "IP", "Innings Pitched", _.IP
+          "H", "Hits Allowed", _.H
+          "R", "Runs Allowed", _.R
+          "ER", "Earned Runs", _.ER
+          "BB", "Walks (Base on Balls)", _.BB
+          "SO", "Strikeouts", _.SO
+          "HBP", "Hit Batters", _.HBP
+          "WP", "Wild Pitches", _.WildPitches
+          "BK", "Balks", _.Balks
+          "GB", "Ground Balls", _.GroundBalls
+          "FB", "Fly Balls", _.FlyBalls
+          "BF", "Batters Faced", _.BattersFaced
+          "#Pit", "Pitches Thrown", _.Pitches
+          "Dec", "Decision (Win/Loss/Save)", _.Decision
+          "Rel", "Relief Decision (Hold/Blown Save)", _.Relief
+          "GSc", "Game Score", _.GameScore
+          "WHIP*", "Walks and Hits per Inning Pitched (season to date)", _.WhipToDate
+          "ERA*", "Earned Run Average (season to date)", _.EraToDate ]
+        rows
+
 let detailView (pl: Player) (stats: PlayerStats) : XmlNode list =
     [ a
           [ _href "/players"
@@ -235,12 +340,18 @@ let detailView (pl: Player) (stats: PlayerStats) : XmlNode list =
       match stats.Batting with
       | Some b -> battingTable b
       | None -> ()
+      if not stats.BattingLog.IsEmpty then
+          battingLogTable stats.BattingLog
       match stats.Fielding with
       | Some f -> fieldingTable f
       | None -> ()
+      if not stats.FieldingLog.IsEmpty then
+          fieldingLogTable stats.FieldingLog
       match stats.Pitching with
       | Some p -> pitchingTable p
       | None -> ()
+      if not stats.PitchingLog.IsEmpty then
+          pitchingLogTable stats.PitchingLog
       
       if stats.Batting.IsNone && stats.Fielding.IsNone && stats.Pitching.IsNone then
           p [ _class "mt-8 rounded-lg bg-card p-6 text-ink-muted ring-1 ring-card-ring" ] [ str "No season stats yet." ] ]

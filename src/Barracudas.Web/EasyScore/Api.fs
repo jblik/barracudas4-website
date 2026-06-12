@@ -94,3 +94,16 @@ type StatsApi(http: HttpClient) =
 
     member _.Pitching(year, leagueId, roundId) : Async<Result<PitchingStatsDto list, EasyScoreError>> =
         getJson http (path Pitching year leagueId roundId)
+
+    /// One player's per-game log of a category (subCategory=log).
+    member private _.Log<'T>(cat, year, leagueId, roundId, playerId: int) : Async<Result<'T list, EasyScoreError>> =
+        getJson http (path cat year leagueId roundId + $"&subCategory=log&playerID=%d{playerId}")
+
+    member this.OffenseLog(year, leagueId, roundId, playerId) : Async<Result<BattingLogDto list, EasyScoreError>> =
+        this.Log(Offense, year, leagueId, roundId, playerId)
+
+    member this.FieldingLog(year, leagueId, roundId, playerId) : Async<Result<FieldingLogDto list, EasyScoreError>> =
+        this.Log(Fielding, year, leagueId, roundId, playerId)
+
+    member this.PitchingLog(year, leagueId, roundId, playerId) : Async<Result<PitchingLogDto list, EasyScoreError>> =
+        this.Log(Pitching, year, leagueId, roundId, playerId)

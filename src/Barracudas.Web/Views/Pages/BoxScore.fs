@@ -17,71 +17,108 @@ let private orDash (s: string) = if s = "" then "—" else s
 
 /// Batting averages arrive as ".294" / ".000", or a digit-less placeholder
 /// (".---", "-.-") when there are no at-bats yet — show those as a dash.
-let private avgText (s: string) = if s |> Seq.exists System.Char.IsDigit then s else "—"
+let private avgText (s: string) =
+    if s |> Seq.exists System.Char.IsDigit then s else "—"
 
 /// Final runs for one side: from the linescore if present, else the totals row.
 let private runsOf (bs: BoxScore) (team: BoxTeam) (isAway: bool) =
     match bs.LineScore with
     | Some ls -> if isAway then ls.Away.Runs else ls.Home.Runs
-    | None -> team.Batters |> List.tryFind (fun b -> b.Order.IsNone) |> Option.map _.R |> Option.defaultValue 0
+    | None ->
+        team.Batters
+        |> List.tryFind (fun b -> b.Order.IsNone)
+        |> Option.map _.R
+        |> Option.defaultValue 0
 
 // --- Scoreboard header --------------------------------------------------------
 
 let private scoreboard (bs: BoxScore) =
     let awayRuns = runsOf bs bs.Away true
     let homeRuns = runsOf bs bs.Home false
+    let maybeInningsPlayed = bs.LineScore |> Option.map _.Innings
+
     let side (t: BoxTeam) (runs: int) (won: bool) (alignRight: bool) =
-        let nameCls = if won then "font-black text-ink-strong" else "font-semibold text-ink"
+        let nameCls =
+            if won then
+                "font-black text-ink-strong"
+            else
+                "font-semibold text-ink"
+
         let block =
             [ logo t.Logo t.Name "h-10 w-10"
-              span [ _class (sprintf "text-lg %s" nameCls) ] [ str t.Name ] ]
+              span [ _class $"text-lg %s{nameCls}" ] [ str t.Name ] ]
+
         div
-            [ _class
-                  (sprintf "flex flex-1 items-center gap-3 %s" (if alignRight then "flex-row-reverse text-right" else "")) ]
+            [ _class (
+                  sprintf "flex flex-1 items-center gap-3 %s" (if alignRight then "flex-row-reverse text-right" else "")
+              ) ]
             (block
-             @ [ span [ _class (sprintf "text-4xl font-black tabular-nums %s" (if won then "text-accent-text" else "text-ink-muted")) ] [ str (string runs) ] ])
+             @ [ span
+                     [ _class (
+                           sprintf
+                               "text-4xl font-black tabular-nums %s"
+                               (if won then "text-accent-text" else "text-ink-muted")
+                       ) ]
+                     [ str (string runs) ] ])
+
     section
         [ _class "rounded-lg bg-card p-5 ring-1 ring-card-ring" ]
         [ div
               [ _class "flex flex-col items-stretch gap-3 sm:flex-row sm:items-center" ]
               [ side bs.Away awayRuns (awayRuns > homeRuns) false
-                span [ _class "text-center text-sm font-bold uppercase tracking-wide text-ink-muted" ] [ str "Final" ]
+                span
+                    [ _class "text-center text-sm font-bold uppercase tracking-wide text-ink-muted" ]
+                    [ str (
+                          "Final"
+                          + (maybeInningsPlayed |> Option.map (fun ip -> $" / {ip}") |> Option.defaultValue "")
+                      ) ]
                 side bs.Home homeRuns (homeRuns > awayRuns) true ] ]
 
 // --- Linescore grid -----------------------------------------------------------
 
 let private lineScoreTable (ls: LineScore) =
-    let th' extra t = th [ _class (sprintf "whitespace-nowrap px-2.5 py-2 %s" extra) ] [ str t ]
-    let total cls v = td [ _class (sprintf "px-2.5 py-2 tabular-nums %s" cls) ] [ str (string v) ]
+    let th' extra t =
+        th [ _class (sprintf "whitespace-nowrap px-2.5 py-2 %s" extra) ] [ str t ]
+
+    let total cls v =
+        td [ _class (sprintf "px-2.5 py-2 tabular-nums %s" cls) ] [ str (string v) ]
+
     let row (t: LineScoreTeam) =
-        tr [ _class "border-b border-line last:border-0" ] (
-            [ td [ _class "px-2.5 py-2 text-left font-bold text-ink-strong whitespace-nowrap" ] [
-                  span [ _class "inline-flex items-center gap-1.5" ] [ logo t.Logo t.Name "h-5 w-5"; str t.Abbr ] ] ]
-            @ [ for v in t.Innings -> td [ _class "px-2.5 py-2 tabular-nums text-ink" ] [ str (orDash v) ] ]
-            @ [ total "font-black text-accent-text" t.Runs
-                total "text-ink" t.Hits
-                total "text-ink" t.Errors ])
-    div [ _class "overflow-x-auto rounded-lg bg-card ring-1 ring-card-ring" ] [
-        table [ _class "w-full text-center text-sm" ] [
-            thead [ _class "border-b border-barracuda-accent/40 text-xs font-bold tracking-wider text-accent-text" ] [
-                tr [] (
-                    [ th' "text-left" "" ]
-                    @ [ for i in 1 .. ls.Innings -> th' "" (string i) ]
-                    @ [ th' "" "R"; th' "" "H"; th' "" "E" ])
-            ]
-            tbody [] [ row ls.Away; row ls.Home ]
-        ]
-    ]
+        tr
+            [ _class "border-b border-line last:border-0" ]
+            ([ td
+                   [ _class "px-2.5 py-2 text-left font-bold text-ink-strong whitespace-nowrap" ]
+                   [ span [ _class "inline-flex items-center gap-1.5" ] [ logo t.Logo t.Name "h-5 w-5"; str t.Abbr ] ] ]
+             @ [ for v in t.Innings -> td [ _class "px-2.5 py-2 tabular-nums text-ink" ] [ str (orDash v) ] ]
+             @ [ total "font-black text-accent-text" t.Runs
+                 total "text-ink" t.Hits
+                 total "text-ink" t.Errors ])
+
+    div
+        [ _class "overflow-x-auto rounded-lg bg-card ring-1 ring-card-ring" ]
+        [ table
+              [ _class "w-full text-center text-sm" ]
+              [ thead
+                    [ _class "border-b border-barracuda-accent/40 text-xs font-bold tracking-wider text-accent-text" ]
+                    [ tr
+                          []
+                          ([ th' "text-left" "" ]
+                           @ [ for i in 1 .. ls.Innings -> th' "" (string i) ]
+                           @ [ th' "" "R"; th' "" "H"; th' "" "E" ]) ]
+                tbody [] [ row ls.Away; row ls.Home ] ] ]
 
 // --- Batting / pitching tables ------------------------------------------------
 
 let private headRow (cols: (string * string * string) list) =
-    thead [ _class "border-b border-barracuda-accent/40 text-xs font-bold tracking-wider text-accent-text" ] [
-        tr [] [
-            for label, full, align in cols ->
-                th [ _class (sprintf "cursor-help whitespace-nowrap px-2.5 py-2 %s" align); _title full ] [ str label ]
-        ]
-    ]
+    thead
+        [ _class "border-b border-barracuda-accent/40 text-xs font-bold tracking-wider text-accent-text" ]
+        [ tr
+              []
+              [ for label, full, align in cols ->
+                    th
+                        [ _class (sprintf "cursor-help whitespace-nowrap px-2.5 py-2 %s" align)
+                          _title full ]
+                        [ str label ] ] ]
 
 let private battingTable (t: BoxTeam) =
     let cols =
@@ -94,36 +131,48 @@ let private battingTable (t: BoxTeam) =
           "SO", "Strikeouts", "text-center"
           "LOB", "Left on Base", "text-center"
           "AVG", "Batting Average (season to date)", "text-center" ]
-    let num (n: int) = td [ _class "px-2.5 py-2 text-center tabular-nums text-ink" ] [ str (string n) ]
+
+    let num (n: int) =
+        td [ _class "px-2.5 py-2 text-center tabular-nums text-ink" ] [ str (string n) ]
+
     let batterRow (b: BoxBatter) =
         match b.Order with
         | None ->
-            tr [ _class "border-t-2 border-barracuda-accent/40 font-black text-ink-strong" ] [
-                td [ _class "px-2.5 py-2 text-left" ] [ str "Totals" ]
-                td [ _class "px-2.5 py-2 text-center tabular-nums" ] [ str (string b.AB) ]
-                td [ _class "px-2.5 py-2 text-center tabular-nums" ] [ str (string b.R) ]
-                td [ _class "px-2.5 py-2 text-center tabular-nums" ] [ str (string b.H) ]
-                td [ _class "px-2.5 py-2 text-center tabular-nums" ] [ str (string b.RBI) ]
-                td [ _class "px-2.5 py-2 text-center tabular-nums" ] [ str (string b.BB) ]
-                td [ _class "px-2.5 py-2 text-center tabular-nums" ] [ str (string b.SO) ]
-                td [ _class "px-2.5 py-2 text-center tabular-nums" ] [ str (string b.LOB) ]
-                td [ _class "px-2.5 py-2 text-center" ] [ str "" ]
-            ]
+            tr
+                [ _class "border-t-2 border-barracuda-accent/40 font-black text-ink-strong" ]
+                [ td [ _class "px-2.5 py-2 text-left" ] [ str "Totals" ]
+                  td [ _class "px-2.5 py-2 text-center tabular-nums" ] [ str (string b.AB) ]
+                  td [ _class "px-2.5 py-2 text-center tabular-nums" ] [ str (string b.R) ]
+                  td [ _class "px-2.5 py-2 text-center tabular-nums" ] [ str (string b.H) ]
+                  td [ _class "px-2.5 py-2 text-center tabular-nums" ] [ str (string b.RBI) ]
+                  td [ _class "px-2.5 py-2 text-center tabular-nums" ] [ str (string b.BB) ]
+                  td [ _class "px-2.5 py-2 text-center tabular-nums" ] [ str (string b.SO) ]
+                  td [ _class "px-2.5 py-2 text-center tabular-nums" ] [ str (string b.LOB) ]
+                  td [ _class "px-2.5 py-2 text-center" ] [ str "" ] ]
         | Some spot ->
-            tr [ _class "border-b border-line transition-colors hover:bg-row-hover" ] [
-                td [ _class "px-2.5 py-2 text-left whitespace-nowrap font-semibold text-ink-strong" ] [
-                    span [ _class "inline-flex items-baseline gap-1.5" ] [
-                        span [ _class "w-4 text-right text-xs tabular-nums text-ink-muted" ] [ str (if b.IsSub then "" else string spot) ]
-                        span [ _class (if b.IsSub then "pl-3" else "") ] [ str b.Name ]
-                        span [ _class "text-xs font-medium text-ink-muted" ] [ str b.Pos ]
-                    ]
-                ]
-                num b.AB; num b.R; num b.H; num b.RBI; num b.BB; num b.SO; num b.LOB
-                td [ _class "px-2.5 py-2 text-center tabular-nums text-ink-muted" ] [ str (avgText b.Avg) ]
-            ]
-    div [ _class "overflow-x-auto rounded-lg bg-card ring-1 ring-card-ring" ] [
-        table [ _class "w-full text-sm" ] [ headRow cols; tbody [] [ for b in t.Batters -> batterRow b ] ]
-    ]
+            tr
+                [ _class "border-b border-line transition-colors hover:bg-row-hover" ]
+                [ td
+                      [ _class "px-2.5 py-2 text-left whitespace-nowrap font-semibold text-ink-strong" ]
+                      [ span
+                            [ _class "inline-flex items-baseline gap-1.5" ]
+                            [ span
+                                  [ _class "w-4 text-right text-xs tabular-nums text-ink-muted" ]
+                                  [ str (if b.IsSub then "" else string spot) ]
+                              span [ _class (if b.IsSub then "pl-3" else "") ] [ str b.Name ]
+                              span [ _class "text-xs font-medium text-ink-muted" ] [ str b.Pos ] ] ]
+                  num b.AB
+                  num b.R
+                  num b.H
+                  num b.RBI
+                  num b.BB
+                  num b.SO
+                  num b.LOB
+                  td [ _class "px-2.5 py-2 text-center tabular-nums text-ink-muted" ] [ str (avgText b.Avg) ] ]
+
+    div
+        [ _class "overflow-x-auto rounded-lg bg-card ring-1 ring-card-ring" ]
+        [ table [ _class "w-full text-sm" ] [ headRow cols; tbody [] [ for b in t.Batters -> batterRow b ] ] ]
 
 let private pitchingTable (t: BoxTeam) =
     let cols =
@@ -138,52 +187,77 @@ let private pitchingTable (t: BoxTeam) =
           "BF", "Batters Faced", "text-center"
           "NP", "Number of Pitches (Strikes)", "text-center"
           "ERA", "Earned Run Average (season to date)", "text-center" ]
+
     let pitcherRow (p: BoxPitcher) =
         let rowCls =
-            if p.IsTotals then "border-t-2 border-barracuda-accent/40 font-black text-ink-strong"
-            else "border-b border-line transition-colors last:border-0 hover:bg-row-hover"
+            if p.IsTotals then
+                "border-t-2 border-barracuda-accent/40 font-black text-ink-strong"
+            else
+                "border-b border-line transition-colors last:border-0 hover:bg-row-hover"
+
         let nameCls =
-            if p.IsTotals then "px-2.5 py-2 text-left whitespace-nowrap"
-            else "px-2.5 py-2 text-left whitespace-nowrap font-semibold text-ink-strong"
+            if p.IsTotals then
+                "px-2.5 py-2 text-left whitespace-nowrap"
+            else
+                "px-2.5 py-2 text-left whitespace-nowrap font-semibold text-ink-strong"
+
         let num (s: string) =
-            td [ _class (sprintf "px-2.5 py-2 text-center tabular-nums %s" (if p.IsTotals then "" else "text-ink")) ] [ str s ]
-        tr [ _class rowCls ] [
-            td [ _class nameCls ] [ str p.Name ]
-            num p.IP; num (string p.H); num (string p.R); num (string p.ER); num (string p.BB); num (string p.SO); num (string p.HR); num (string p.BattersFaced)
-            num (sprintf "%d (%d)" p.Pitches p.Strikes)
-            td [ _class "px-2.5 py-2 text-center tabular-nums text-ink-muted" ] [ str (if p.IsTotals then "" else p.ERA) ]
-        ]
-    div [ _class "overflow-x-auto rounded-lg bg-card ring-1 ring-card-ring" ] [
-        table [ _class "w-full text-sm" ] [ headRow cols; tbody [] [ for p in t.Pitchers -> pitcherRow p ] ]
-    ]
+            td
+                [ _class (sprintf "px-2.5 py-2 text-center tabular-nums %s" (if p.IsTotals then "" else "text-ink")) ]
+                [ str s ]
+
+        tr
+            [ _class rowCls ]
+            [ td [ _class nameCls ] [ str p.Name ]
+              num p.IP
+              num (string p.H)
+              num (string p.R)
+              num (string p.ER)
+              num (string p.BB)
+              num (string p.SO)
+              num (string p.HR)
+              num (string p.BattersFaced)
+              num (sprintf "%d (%d)" p.Pitches p.Strikes)
+              td
+                  [ _class "px-2.5 py-2 text-center tabular-nums text-ink-muted" ]
+                  [ str (if p.IsTotals then "" else p.ERA) ] ]
+
+    div
+        [ _class "overflow-x-auto rounded-lg bg-card ring-1 ring-card-ring" ]
+        [ table [ _class "w-full text-sm" ] [ headRow cols; tbody [] [ for p in t.Pitchers -> pitcherRow p ] ] ]
 
 let private teamSection (t: BoxTeam) (isUs: bool) =
-    section [ _class "mt-8" ] [
-        h2 [ _class "mb-3 flex items-center gap-2 text-lg font-black uppercase tracking-tight text-ink-strong" ] [
-            logo t.Logo t.Name "h-7 w-7"
-            span [ _class (if isUs then "text-accent-text" else "") ] [ str t.Name ]
-        ]
-        battingTable t
-        div [ _class "mt-4" ] [ pitchingTable t ]
-    ]
+    section
+        [ _class "mt-8" ]
+        [ h2
+              [ _class "mb-3 flex items-center gap-2 text-lg font-black uppercase tracking-tight text-ink-strong" ]
+              [ logo t.Logo t.Name "h-7 w-7"
+                span [ _class (if isUs then "text-accent-text" else "") ] [ str t.Name ] ]
+          battingTable t
+          div [ _class "mt-4" ] [ pitchingTable t ] ]
 
 // --- Game notes ---------------------------------------------------------------
 
 let private notesSection (notes: BoxNote list) (awayAbbr: string) (homeAbbr: string) =
     let line (abbr: string) (text: string option) =
         match text with
-        | Some s -> [ p [ _class "leading-snug" ] [ span [ _class "font-bold text-accent-text" ] [ str (abbr + ": ") ]; str s ] ]
+        | Some s ->
+            [ p [ _class "leading-snug" ] [ span [ _class "font-bold text-accent-text" ] [ str (abbr + ": ") ]; str s ] ]
         | None -> []
-    section [ _class "mt-8" ] [
-        h2 [ _class "mb-3 text-lg font-black uppercase tracking-tight text-ink-strong" ] [ str "Game Notes" ]
-        div [ _class "space-y-3 rounded-lg bg-card p-5 text-sm text-ink ring-1 ring-card-ring" ] [
-            for n in notes ->
-                div [] (
-                    [ div [ _class "mb-0.5 text-xs font-bold uppercase tracking-wide text-ink-muted" ] [ str n.Label ] ]
-                    @ line awayAbbr n.Away
-                    @ line homeAbbr n.Home)
-        ]
-    ]
+
+    section
+        [ _class "mt-8" ]
+        [ h2 [ _class "mb-3 text-lg font-black uppercase tracking-tight text-ink-strong" ] [ str "Game Notes" ]
+          div
+              [ _class "space-y-3 rounded-lg bg-card p-5 text-sm text-ink ring-1 ring-card-ring" ]
+              [ for n in notes ->
+                    div
+                        []
+                        ([ div
+                               [ _class "mb-0.5 text-xs font-bold uppercase tracking-wide text-ink-muted" ]
+                               [ str n.Label ] ]
+                         @ line awayAbbr n.Away
+                         @ line homeAbbr n.Home) ] ]
 
 // --- Page ---------------------------------------------------------------------
 
@@ -192,7 +266,11 @@ let view (bs: BoxScore) : XmlNode list =
         [ bs.Date.ToString "dddd, MMMM d, yyyy"; bs.Location; bs.Round ]
         |> List.filter (fun s -> s <> "")
         |> String.concat " · "
-    [ a [ _href "/schedule"; _class "text-sm font-semibold text-accent-text hover:underline" ] [ str "← Schedule" ]
+
+    [ a
+          [ _href "/schedule"
+            _class "text-sm font-semibold text-accent-text hover:underline" ]
+          [ str "← Schedule" ]
       pageHeader "Box Score" subtitle
       scoreboard bs
       match bs.LineScore with
@@ -203,8 +281,11 @@ let view (bs: BoxScore) : XmlNode list =
       if not (List.isEmpty bs.Notes) then
           notesSection bs.Notes bs.Away.Abbr bs.Home.Abbr
       if not (String.length bs.Umpires = 0 && String.length bs.Scorer = 0) then
-          p [ _class "mt-8 text-xs text-ink-muted" ] [
-              if bs.Umpires <> "" then str (sprintf "Umpires: %s" bs.Umpires)
-              if bs.Umpires <> "" && bs.Scorer <> "" then str "  ·  "
-              if bs.Scorer <> "" then str (sprintf "Scorer: %s" bs.Scorer)
-          ] ]
+          p
+              [ _class "mt-8 text-xs text-ink-muted" ]
+              [ if bs.Umpires <> "" then
+                    str (sprintf "Umpires: %s" bs.Umpires)
+                if bs.Umpires <> "" && bs.Scorer <> "" then
+                    str "  ·  "
+                if bs.Scorer <> "" then
+                    str (sprintf "Scorer: %s" bs.Scorer) ] ]

@@ -16,7 +16,7 @@ type IEasyScoreSource =
     abstract member GetStandings: unit -> Task<Result<Standing list, EasyScoreError>>
     abstract member GetTeamStats: unit -> Task<Result<TeamStat list, EasyScoreError>>
     abstract member GetPlayers: unit -> Task<Result<Player list, EasyScoreError>>
-    abstract member GetPlayerStats: id: string -> Task<Result<PlayerStats, EasyScoreError>>
+    abstract member GetPlayerStats: logger: ILogger -> id: string -> Task<Result<PlayerStats, EasyScoreError>>
     abstract member GetBoxScore: gameId: string -> Task<Result<BoxScore option, EasyScoreError>>
     abstract member GetLiveGame: unit -> Task<Result<LiveGame option, EasyScoreError>>
 
@@ -42,7 +42,7 @@ type IEasyScoreClient =
 
 /// IEasyScoreSource over the EasyScore v2 REST API. Composes the per-resource
 /// fetch classes (Api) with the DTO→domain converters (Convert).
-type EasyScoreApiClient(http: HttpClient, cfg: Config.AppConfig) =
+type EasyScoreApiClient(http: HttpClient, config: Config.AppConfig) =
     let roundsApi = RoundsApi http
     let teamsApi = TeamsApi http
     let scheduleApi = ScheduleApi http
@@ -53,8 +53,8 @@ type EasyScoreApiClient(http: HttpClient, cfg: Config.AppConfig) =
     /// Our round id (1. Liga Ost), resolved from the league's rounds.
     let roundId () =
         asyncResult {
-            let! rounds = roundsApi.ByLeague cfg.LeagueId
-            let! round = Convert.findRound cfg.RoundFilter rounds
+            let! rounds = roundsApi.ByLeague config.LeagueId
+            let! round = Convert.findRound config.RoundFilter rounds
             return round.ID
         }
 
@@ -62,51 +62,51 @@ type EasyScoreApiClient(http: HttpClient, cfg: Config.AppConfig) =
     let leagueGames (season: int) =
         asyncResult {
             let! rd = roundId ()
-            return! scheduleApi.ByRound(season, cfg.LeagueId, rd)
+            return! scheduleApi.ByRound(season, config.LeagueId, rd)
         }
 
     let ourGames (season: int) =
         asyncResult {
             let! games = leagueGames season
-            return! Convert.toGames cfg.TeamId games
+            return! Convert.toGames config.TeamId games
         }
 
     let standings () =
         asyncResult {
             let! rd = roundId ()
-            let! teams = teamsApi.ByRound(rd, cfg.LeagueId, cfg.Season)
-            let! games = scheduleApi.ByRound(cfg.Season, cfg.LeagueId, rd)
-            return! Convert.toStandings cfg.TeamId teams games
+            let! teams = teamsApi.ByRound(rd, config.LeagueId, config.Season)
+            let! games = scheduleApi.ByRound(config.Season, config.LeagueId, rd)
+            return! Convert.toStandings config.TeamId teams games
         }
 
     /// Round-wide offensive stats (one row per player with plate appearances).
     let offenseStats () =
         asyncResult {
             let! rd = roundId ()
-            return! statsApi.Offense(cfg.Season, cfg.LeagueId, rd)
+            return! statsApi.Offense(config.Season, config.LeagueId, rd)
         }
 
     let roster () =
         asyncResult {
-            let! players = playersApi.ByUser cfg.RequestUserId
+            let! players = playersApi.ByUser config.RequestUserId
             let! offense = offenseStats ()
-            return! Convert.toRoster cfg.ActiveRoster players offense
+            return! Convert.toRoster config.ActiveRoster players offense
         }
 
-    let playerStats (id: string) =
+    let playerStats (logger: ILogger) (id: string) =
         asyncResult {
             let! playerId =
                 match System.Int32.TryParse id with
                 | true, v -> Ok v
                 | _ -> Error(ConvertError $"invalid player id '%s{id}'")
-            let! rd = roundId ()
-            let! offense = statsApi.Offense(cfg.Season, cfg.LeagueId, rd)
-            let! fielding = statsApi.Fielding(cfg.Season, cfg.LeagueId, rd)
-            let! pitching = statsApi.Pitching(cfg.Season, cfg.LeagueId, rd)
-            let! battingLog = statsApi.OffenseLog(cfg.Season, cfg.LeagueId, rd, playerId)
-            let! fieldingLog = statsApi.FieldingLog(cfg.Season, cfg.LeagueId, rd, playerId)
-            let! pitchingLog = statsApi.PitchingLog(cfg.Season, cfg.LeagueId, rd, playerId)
-            return! Convert.toPlayerStats playerId offense fielding pitching battingLog fieldingLog pitchingLog
+            let! roundId = roundId ()
+            let! offense = statsApi.Offense(config.Season, config.LeagueId, roundId)
+            let! fielding = statsApi.Fielding(config.Season, config.LeagueId, roundId)
+            let! pitching = statsApi.Pitching(config.Season, config.LeagueId, roundId)
+            let! battingLog = statsApi.OffenseLog(config.Season, config.LeagueId, roundId, playerId)
+            let! fieldingLog = statsApi.FieldingLog(config.Season, config.LeagueId, roundId, playerId)
+            let! pitchingLog = statsApi.PitchingLog(config.Season, config.LeagueId, roundId, playerId)
+            return! playerId |> Convert.toPlayerStats logger offense fielding pitching battingLog fieldingLog pitchingLog
         }
 
     /// A completed game's box score: linescore from /games, lines from /stats?box.
@@ -123,7 +123,7 @@ type EasyScoreApiClient(http: HttpClient, cfg: Config.AppConfig) =
             let opponentId =
                 detail
                 |> List.tryHead
-                |> Option.map (fun d -> if d.AwayTeam = cfg.TeamId then d.HomeTeam else d.AwayTeam)
+                |> Option.map (fun d -> if d.AwayTeam = config.TeamId then d.HomeTeam else d.AwayTeam)
             let! opponentColor =
                 match opponentId with
                 | Some oid ->
@@ -133,7 +133,7 @@ type EasyScoreApiClient(http: HttpClient, cfg: Config.AppConfig) =
                         | Error _ -> return Ok None
                     }
                 | None -> async { return Ok None }
-            return! Convert.toBoxScore cfg.TeamId gameId opponentColor detail box
+            return! Convert.toBoxScore config.TeamId gameId opponentColor detail box
         }
 
     let toTask (work: Async<Result<'a, EasyScoreError>>) = Async.StartImmediateAsTask work
@@ -146,20 +146,20 @@ type EasyScoreApiClient(http: HttpClient, cfg: Config.AppConfig) =
         member _.GetTeamStats() =
             toTask (asyncResult {
                 let! table = standings ()
-                let! games = ourGames cfg.Season
+                let! games = ourGames config.Season
                 return! Convert.toTeamStats table games
             })
 
         member _.GetPlayers() = toTask (roster ())
 
-        member _.GetPlayerStats id = toTask (playerStats id)
+        member _.GetPlayerStats logger id = toTask (playerStats logger id)
 
         member _.GetBoxScore id = toTask (boxScore id)
 
         member _.GetLiveGame() =
             toTask (asyncResult {
-                let! games = leagueGames cfg.Season
-                return! Convert.toLiveGame cfg.TeamId games
+                let! games = leagueGames config.Season
+                return! Convert.toLiveGame config.TeamId games
             })
 
 /// IEasyScoreClient over an IEasyScoreSource: logs failures and degrades them
@@ -199,7 +199,7 @@ type DegradingEasyScoreClient(source: IEasyScoreSource, logger: ILogger<Degradin
                   BattingLog = []
                   FieldingLog = []
                   PitchingLog = [] }
-            orEmpty "GetPlayerStats" empty (source.GetPlayerStats id)
+            orEmpty "GetPlayerStats" empty (source.GetPlayerStats logger id)
 
         member _.GetBoxScore id = orEmpty "GetBoxScore" None (source.GetBoxScore id)
 

@@ -221,9 +221,9 @@ let private queryStr (cols: string list) (sort: string option) (dir: string) =
 
 /// HTMX attributes for a state-changing link: fetch the swappable panel, while
 /// pushing the equivalent page URL so the selection survives refresh and sharing.
-let private hxLink (cols: string list) (sort: string option) (dir: string)=
+let private hxLink (cols: string list) (sort: string option) (dir: string) (menu: bool) =
     let q = queryStr cols sort dir
-    [ _hxGet ("/players/partial" + q)
+    [ _hxGet ("/players/partial" + q + (if menu then "&menu=open" else ""))
       _hxPushUrl ("/players" + q)
       _hxTarget "#players-panel"
       _hxSwap "outerHTML" ]
@@ -238,7 +238,7 @@ let private header (cols: string list) (active: string option) (desc: bool) (col
 
     let attrs =
         _class (col.HeaderClass + " cursor-pointer select-none hover:underline")
-        :: hxLink cols (Some col.Key) nextDir
+        :: hxLink cols (Some col.Key) nextDir false
 
     th (if col.Full <> "" then attrs @ [ _title col.Full ] else attrs) [ str (col.Label + arrow) ]
 
@@ -268,7 +268,7 @@ let private columnToggle (cols: string list) (sort: string option) (desc: bool) 
             "cursor-help rounded-md bg-card px-2 py-1 text-xs font-semibold text-ink-strong ring-1 ring-card-ring transition-colors hover:ring-barracuda-accent/70"
 
     a
-        ([ _class cls; _title sc.Full ] @ hxLink next sort (if desc then "desc" else "asc"))
+        ([ _class cls; _title sc.Full ] @ hxLink next sort (if desc then "desc" else "asc") true)
         [ str sc.Label ]
 
 /// The "Columns" button + dropdown panel, grouped batting / fielding / pitching.

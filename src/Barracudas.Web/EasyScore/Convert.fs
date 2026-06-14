@@ -180,7 +180,11 @@ let toRoster
     : Async<Result<Player list, EasyScoreError>> =
     asyncResult {
         let active = Set.ofList activeRoster
-        let avgs = offense |> List.map (fun s -> s.PlayerID, s.BA |> Option.defaultValue "") |> Map.ofList
+
+        let avgs =
+            offense
+            |> List.map (fun s -> s.PlayerID, s.BA |> Option.defaultValue "")
+            |> Map.ofList
 
         return
             [ for p in dtos do
@@ -207,8 +211,14 @@ let private logDate (s: string) =
 let private logWarningDefaultEmpty (logger: ILogger) playerId what =
     what
     |> Option.defaultWith (fun _ ->
-        logger.LogWarning("Unable to parse {What} for player {Player}; defaulting to 0", nameof what, playerId)
+        logger.LogWarning("Unable to parse {What} for player {Player}; defaulting to \"\"", nameof what, playerId)
         "")
+
+let private logWarningDefaultZero (logger: ILogger) playerId what =
+    what
+    |> Option.defaultWith (fun _ ->
+        logger.LogWarning("Unable to parse {What} for player {Player}; defaulting to 0", nameof what, playerId)
+        0)
 
 /// A player's season stat lines, picked out of the round-wide stat lists,
 /// plus the per-game logs (already filtered to the player by the API).
@@ -227,7 +237,7 @@ let toPlayerStats
             offense
             |> List.tryFind (fun s -> s.PlayerID = playerId)
             |> Option.map (fun s ->
-                { Games = s.G |> Option.defaultValue 0
+                { Games = s.G |> logWarningDefaultZero logger playerId
                   PA = s.PA |> logWarningDefaultEmpty logger playerId
                   AB = s.AB |> logWarningDefaultEmpty logger playerId
                   R = s.R |> logWarningDefaultEmpty logger playerId
@@ -251,7 +261,7 @@ let toPlayerStats
             fielding
             |> List.tryFind (fun s -> s.PlayerID = playerId)
             |> Option.map (fun s ->
-                { Games = s.G |> Option.defaultValue 0
+                { Games = s.G |> logWarningDefaultZero logger playerId
                   Innings = s.InningsPlayed |> logWarningDefaultEmpty logger playerId
                   Putouts = s.Putout |> logWarningDefaultEmpty logger playerId
                   Assists = s.Assist |> logWarningDefaultEmpty logger playerId
@@ -385,23 +395,19 @@ let private toLineTeam (s: LineScoreSideDto) (innings: int) : LineScoreTeam =
       Hits = s.totals.H
       Errors = s.totals.E }
 
-let private toBatter (h: BoxHitterDto) : BoxBatter =
+let private toBatter logger (h: BoxHitterDto) : BoxBatter =
     { Order = (if h.Spot = 100 then None else Some h.Spot)
-      PlayerId =
-        (if h.Spot = 100 || h.playerID = 0 then
-             None
-         else
-             Some h.playerID)
+      PlayerId = h.playerID
       IsSub = h.SubbedIn |> Option.bind blankToNone |> Option.isSome
       Pos = h.Pos
       Name = h.playerName
-      AB = h.AB
-      R = h.R
-      H = h.H
-      RBI = h.RBI
-      BB = h.BB
-      SO = h.SO
-      LOB = h.LOB
+      AB = h.AB |> logWarningDefaultZero logger h.playerID
+      R = h.R |> logWarningDefaultZero logger h.playerID
+      H = h.H |> logWarningDefaultZero logger h.playerID
+      RBI = h.RBI |> logWarningDefaultZero logger h.playerID
+      BB = h.BB |> logWarningDefaultZero logger h.playerID
+      SO = h.SO |> logWarningDefaultZero logger h.playerID
+      LOB = h.LOB |> logWarningDefaultZero logger h.playerID
       Avg = defaultArg h.BA "" }
 
 let private toPitcher (p: BoxPitcherDto) : BoxPitcher =
@@ -439,6 +445,7 @@ let private boxNote (label: string) (d: BoxNoteDto option) : BoxNote option =
 
 /// A completed game's box score: linescore from /games, the rest from /stats?box.
 let toBoxScore
+    (logger: ILogger)
     (teamId: int)
     (gameId: int)
     (opponentColor: string option)
@@ -472,9 +479,10 @@ let toBoxScore
                 |> Option.bind (fun d -> d.LineScore |> List.tryHead)
                 |> Option.map (fun ls ->
                     let inningsPlayed =
-                        match Int32.TryParse ls.innings with
-                        | true, v -> v
-                        | _ -> List.max [ ls.away.line.Count; ls.home.line.Count; 1 ]
+                        if ls.innings > 0 then
+                            ls.innings
+                        else
+                            List.max [ ls.away.line.Count; ls.home.line.Count; 1 ]
 
                     { Innings = inningsPlayed
                       Away = toLineTeam ls.away inningsPlayed
@@ -486,7 +494,7 @@ let toBoxScore
                   Logo = logo |> Option.bind blankToNone
                   IsUs = isUs
                   Color = (if isUs then None else opponentColor)
-                  Batters = hitters |> List.map toBatter
+                  Batters = hitters |> List.map (toBatter logger)
                   Pitchers = pits }
 
             let notes =
@@ -514,8 +522,8 @@ let toBoxScore
                       Umpires = b.GameInfo.Misc.Umpires
                       Scorer = b.GameInfo.Misc.Scorer
                       LineScore = lineScore
-                      Away = team b.AwayTeamName b.AwayTeamAbbr b.AwayTeamLogo awayIsUs (side "T") (pitchers "T")
-                      Home = team b.HomeTeamName b.HomeTeamAbbr b.HomeTeamLogo homeIsUs (side "B") (pitchers "B")
+                      Away = team b.AwayTeam b.AwayTeamAbbr b.AwayTeamLogo awayIsUs (side "T") (pitchers "T")
+                      Home = team b.HomeTeam b.HomeTeamAbbr b.HomeTeamLogo homeIsUs (side "B") (pitchers "B")
                       Notes = notes }
     }
 

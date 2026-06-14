@@ -207,7 +207,7 @@ and LineScoreTotalsDto = { R: int; H: int; E: int }
 type LineScoreEntryDto =
     { away: LineScoreSideDto
       home: LineScoreSideDto
-      innings: string }
+      innings: int }
 
 /// GET /games?id={gameId}&… — only the linescore is consumed here; the rest of
 /// the box score comes from /stats?box.
@@ -224,15 +224,15 @@ type BoxHitterDto =
       SubbedIn: string option
       TopOrBot: string
       Pos: string
-      playerID: int
+      playerID: int option
       playerName: string
-      AB: int
-      R: int
-      H: int
-      RBI: int
-      BB: int
-      SO: int
-      LOB: int
+      AB: int option
+      R: int option
+      H: int option
+      RBI: int option
+      BB: int option
+      SO: int option
+      LOB: int option
       BA: string option }
 
 /// One pitcher's line in a box score (GET /stats?box). HA/RA/HRA = hits/runs/HR
@@ -258,10 +258,8 @@ type BoxNoteDto = { T: string option; B: string option }
 
 /// The box score payload (GET /stats?box={gameId} → [{ BoxScores }]).
 type BoxScoresDto =
-    { AwayTeam: int
-      HomeTeam: int
-      AwayTeamName: string
-      HomeTeamName: string
+    { AwayTeam: string
+      HomeTeam: string
       AwayTeamAbbr: string
       HomeTeamAbbr: string
       AwayTeamLogo: string option

@@ -15,7 +15,7 @@ type IEasyScoreSource =
     abstract member GetSchedule: season: int -> Task<Result<Game list, EasyScoreError>>
     abstract member GetStandings: unit -> Task<Result<Standing list, EasyScoreError>>
     abstract member GetTeamStats: unit -> Task<Result<TeamStat list, EasyScoreError>>
-    abstract member GetPlayers: unit -> Task<Result<Player list, EasyScoreError>>
+    abstract member GetPlayers: logger: ILogger -> Task<Result<Player list, EasyScoreError>>
     abstract member GetPlayerStats: logger: ILogger -> id: string -> Task<Result<PlayerStats, EasyScoreError>>
     abstract member GetBoxScore:  logger: ILogger -> gameId: string -> Task<Result<BoxScore option, EasyScoreError>>
     abstract member GetLiveGame: unit -> Task<Result<LiveGame option, EasyScoreError>>
@@ -79,18 +79,14 @@ type EasyScoreApiClient(http: HttpClient, config: Config.AppConfig) =
             return! Convert.toStandings config.TeamId teams games
         }
 
-    /// Round-wide offensive stats (one row per player with plate appearances).
-    let offenseStats () =
+    let roster (logger: ILogger) =
         asyncResult {
             let! rd = roundId ()
-            return! statsApi.Offense(config.Season, config.LeagueId, rd)
-        }
-
-    let roster () =
-        asyncResult {
             let! players = playersApi.ByUser config.RequestUserId
-            let! offense = offenseStats ()
-            return! Convert.toRoster config.ActiveRoster players offense
+            let! offense = statsApi.Offense(config.Season, config.LeagueId, rd)
+            let! fielding = statsApi.Fielding(config.Season, config.LeagueId, rd)
+            let! pitching = statsApi.Pitching(config.Season, config.LeagueId, rd)
+            return! Convert.toRoster logger config.ActiveRoster players offense fielding pitching
         }
 
     let playerStats (logger: ILogger) (id: string) =
@@ -169,7 +165,7 @@ type EasyScoreApiClient(http: HttpClient, config: Config.AppConfig) =
                 }
             )
 
-        member _.GetPlayers() = toTask (roster ())
+        member _.GetPlayers logger = toTask (roster logger)
 
         member _.GetPlayerStats logger id = toTask (playerStats logger id)
 
@@ -207,7 +203,7 @@ type DegradingEasyScoreClient(source: IEasyScoreSource, logger: ILogger<Degradin
             orEmpty "GetTeamStats" [] (source.GetTeamStats())
 
         member _.GetPlayers() =
-            orEmpty "GetPlayers" [] (source.GetPlayers())
+            orEmpty "GetPlayers" [] (source.GetPlayers logger)
 
         member this.GetPlayer id =
             // Lookup into the roster (cached one layer down).

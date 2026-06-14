@@ -55,8 +55,11 @@ let standings : HttpHandler =
 let players : HttpHandler =
     fun next ctx ->
         task {
+            let sort = ctx.TryGetQueryStringValue "sort"
+            let desc = ctx.TryGetQueryStringValue "dir" = Some "desc"
+            let cols = Pages.Players.parseCols (ctx.TryGetQueryStringValue "cols")
             let! ps = (client ctx).GetPlayers()
-            return! renderPage "players" "Players" ctx (Pages.Players.listView ps) next ctx
+            return! renderPage "players" "Players" ctx (Pages.Players.listView cols sort desc ps) next ctx
         }
 
 let playersPartial : HttpHandler =
@@ -64,8 +67,10 @@ let playersPartial : HttpHandler =
         task {
             let sort = ctx.TryGetQueryStringValue "sort"
             let desc = ctx.TryGetQueryStringValue "dir" = Some "desc"
+            let cols = Pages.Players.parseCols (ctx.TryGetQueryStringValue "cols")
+            let menu = ctx.TryGetQueryStringValue "menu" = Some "open"
             let! ps = (client ctx).GetPlayers()
-            return! htmlView (Pages.Players.rosterTable sort desc ps) next ctx
+            return! htmlView (Pages.Players.rosterPanel cols sort desc menu ps) next ctx
         }
 
 let player (id: string) : HttpHandler =

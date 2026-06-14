@@ -24,24 +24,21 @@ type private SortKey =
     | Missing
 
 /// One roster column: how to render its header and cells, and how to order rows by it.
+/// `Full` is the tooltip / popup label (empty for the always-on base columns).
 type private Column =
     { Key: string
       Label: string
+      Full: string
       HeaderClass: string
       Cell: Player -> XmlNode
       SortKey: Player -> SortKey }
 
-let private avgKey (p: Player) =
-    match p.BattingAvg with
-    | Some a ->
-        match System.Double.TryParse(a, System.Globalization.CultureInfo.InvariantCulture) with
-        | true, v -> Num v
-        | false, _ -> Missing
-    | None -> Missing
+// --- Always-on base columns (No. / Name / B-T) -------------------------------
 
-let private columns =
+let private baseColumns =
     [ { Key = "no"
         Label = "No."
+        Full = ""
         HeaderClass = "pb-2 pr-4"
         Cell = fun p -> td [ _class "py-3 pr-4 font-bold text-accent-text" ] [ str (num p.Number) ]
         SortKey =
@@ -51,6 +48,7 @@ let private columns =
               | None -> Missing }
       { Key = "name"
         Label = "Name"
+        Full = ""
         HeaderClass = "pb-2 pr-4"
         Cell =
           fun p ->
@@ -60,24 +58,143 @@ let private columns =
         SortKey = fun p -> Str p.ListName }
       { Key = "bt"
         Label = "B/T"
+        Full = ""
         HeaderClass = "pb-2 pr-4 text-center"
         Cell = fun p -> td [ _class "py-3 pr-4 text-center" ] [ str (batsThrows p) ]
         SortKey =
           fun p ->
               match batsThrows p with
               | "—" -> Missing
-              | s -> Str s }
-      { Key = "avg"
-        Label = "AVG"
-        HeaderClass = "pb-2 text-center"
-        Cell =
-          fun p -> td [ _class "py-3 text-center font-bold text-accent-text" ] [ str (defaultArg p.BattingAvg "—") ]
-        SortKey = avgKey } ]
+              | s -> Str s } ]
+
+// --- Addable season-stat columns (batting / fielding / pitching) -------------
+
+/// One selectable stat column: its category (for the popup grouping), the short
+/// header label, the full name (tooltip + popup text) and how to read its value
+/// off a player (None when the player has no row in that category).
+type private StatCol =
+    { Key: string
+      Category: string
+      Label: string
+      Full: string
+      Value: Player -> string option }
+
+let private bat key label full (v: BattingStats -> string) : StatCol =
+    { Key = "b_" + key
+      Category = "Batting"
+      Label = label
+      Full = full
+      Value = fun p -> p.Batting |> Option.map v }
+
+let private fld key label full (v: FieldingStats -> string) : StatCol =
+    { Key = "f_" + key
+      Category = "Fielding"
+      Label = label
+      Full = full
+      Value = fun p -> p.Fielding |> Option.map v }
+
+let private pit key label full (v: PitchingStats -> string) : StatCol =
+    { Key = "p_" + key
+      Category = "Pitching"
+      Label = label
+      Full = full
+      Value = fun p -> p.Pitching |> Option.map v }
+
+/// Every addable column, in the order they appear in the table and the popup.
+let private statCatalog : StatCol list =
+    [ bat "g" "G" "Games" (fun s -> string s.Games)
+      bat "pa" "PA" "Plate Appearances" _.PlateAppearances
+      bat "ab" "AB" "At Bats" _.AtBats
+      bat "r" "R" "Runs" _.Runs
+      bat "h" "H" "Hits" _.Hits
+      bat "2b" "2B" "Doubles" _.Doubles
+      bat "3b" "3B" "Triples" _.Triples
+      bat "hr" "HR" "Home Runs" _.HomeRuns
+      bat "rbi" "RBI" "Runs Batted In" _.RunsBattedIn
+      bat "tb" "TB" "Total Bases" _.TotalBases
+      bat "bb" "BB" "Walks (Base on Balls)" _.BaseOnBalls
+      bat "so" "SO" "Strikeouts" _.Strikeouts
+      bat "hbp" "HBP" "Hit by Pitch" _.HitByPitch
+      bat "sb" "SB" "Stolen Bases" _.StolenBases
+      bat "cs" "CS" "Caught Stealing" _.CaughtStealing
+      bat "avg" "AVG" "Batting Average" _.BattingAverage
+      bat "obp" "OBP" "On-Base Percentage" _.OnBasePercentage
+      bat "slg" "SLG" "Slugging Percentage" _.Slugging
+      bat "ops" "OPS" "On-Base Plus Slugging" _.OnBasePlusSlugging
+
+      fld "g" "G" "Games" (fun s -> string s.Games)
+      fld "ip" "IP" "Innings Played" _.Innings
+      fld "po" "PO" "Putouts" _.Putouts
+      fld "a" "A" "Assists" _.Assists
+      fld "oa" "OA" "Outfield Assists" _.OutfieldAssists
+      fld "e" "E" "Errors" _.Errors
+      fld "dp" "DP" "Double Plays" _.DoublePlays
+      fld "pb" "PB" "Passed Balls" _.PassedBalls
+      fld "sba" "SB Att" "Stolen Base Attempts" _.StealAttempts
+      fld "cs" "CS" "Caught Stealing" _.CaughtStealing
+      fld "rf" "RF" "Range Factor" _.RangeFactor
+      fld "fpct" "FPCT" "Fielding Percentage" _.FieldingPct
+
+      pit "g" "G" "Games" _.Games
+      pit "gs" "GS" "Games Started" _.Starts
+      pit "ip" "IP" "Innings Pitched" _.InningsPitched
+      pit "h" "H" "Hits Allowed" _.HitsAllowed
+      pit "r" "R" "Runs Allowed" _.RunsAllowed
+      pit "er" "ER" "Earned Runs" _.EarnedRuns
+      pit "bb" "BB" "Walks (Base on Balls)" _.BaseOnBalls
+      pit "so" "SO" "Strikeouts" _.Strikeouts
+      pit "hbp" "HBP" "Hit Batters" _.HitBatters
+      pit "wp" "WP" "Wild Pitches" _.WildPitches
+      pit "wl" "W–L" "Win–Loss Record" _.Record
+      pit "sv" "SV" "Saves" _.Saves
+      pit "bf" "BF" "Batters Faced" _.BattersFaced
+      pit "oppavg" "OPP AVG" "Opponent Batting Average" _.OpponentBattingAverage
+      pit "whip" "WHIP" "Walks and Hits per Inning Pitched" _.WalksHitsPerInningPitched
+      pit "era" "ERA" "Earned Run Average" _.EarnedRunAverage ]
+
+/// Columns shown by default (matches the original roster: name + batting average).
+let defaultCols = [ "b_avg" ]
+
+/// Parse the ?cols= list; absent means the default selection (first page load).
+let parseCols (s: string option) : string list =
+    match s with
+    | None -> defaultCols
+    | Some v -> v.Split(',') |> Array.toList |> List.filter (fun k -> k <> "")
+
+let private parseStat (v: string) =
+    match System.Double.TryParse(v, System.Globalization.CultureInfo.InvariantCulture) with
+    | true, n -> Num n
+    | _ -> if v = "" || v = "—" then Missing else Str v
+
+/// A stat column rendered as a sortable table column.
+let private toColumn (sc: StatCol) : Column =
+    { Key = sc.Key
+      Label = sc.Label
+      Full = sc.Full
+      HeaderClass = "pb-2 px-3 text-center"
+      Cell =
+        fun p ->
+            td
+                [ _class "py-3 px-3 text-center font-semibold text-ink-strong"; _title sc.Full ]
+                [ str (sc.Value p |> Option.defaultValue "—") ]
+      SortKey =
+        fun p ->
+            match sc.Value p with
+            | Some v -> parseStat v
+            | None -> Missing }
+
+/// Every possible column, used for resolving a sort key by name.
+let private allColumns = baseColumns @ (statCatalog |> List.map toColumn)
+
+/// Base columns plus the selected stat columns, in catalog order.
+let private activeColumns (cols: string list) =
+    let selected = Set.ofList cols
+    baseColumns @ (statCatalog |> List.filter (fun s -> selected.Contains s.Key) |> List.map toColumn)
 
 /// Players already arrive in the default order (last name, first name);
 /// no/unknown sort key keeps it.
 let private applySort (sort: string option) (desc: bool) (players: Player list) =
-    match sort |> Option.bind (fun k -> columns |> List.tryFind (fun c -> c.Key = k)) with
+    match sort |> Option.bind (fun k -> allColumns |> List.tryFind (fun c -> c.Key = k)) with
     | None -> players
     | Some col ->
         let missing, present = players |> List.partition (fun p -> col.SortKey p = Missing)
@@ -90,42 +207,128 @@ let private applySort (sort: string option) (desc: bool) (players: Player list) 
 
         sorted @ missing
 
+/// Shared query string for the column set + sort (no popup flag — that is only
+/// relevant to the partial, never to the page URL pushed into the address bar).
+let private queryStr (cols: string list) (sort: string option) (dir: string) =
+    let sortPart =
+        match sort with
+        | Some s -> $"&sort=%s{s}"
+        | None -> ""
+
+    let colsPart = String.concat "," cols
+    $"?cols=%s{colsPart}%s{sortPart}&dir=%s{dir}"
+
+/// HTMX attributes for a state-changing link: fetch the swappable panel, while
+/// pushing the equivalent page URL so the selection survives refresh and sharing.
+let private hxLink (cols: string list) (sort: string option) (dir: string) (menu: bool) =
+    let q = queryStr cols sort dir
+    [ _hxGet ("/players/partial" + q + (if menu then "&menu=open" else ""))
+      _hxPushUrl ("/players" + q)
+      _hxTarget "#players-panel"
+      _hxSwap "outerHTML" ]
+
 /// Clicking a header sorts ascending; clicking the active column flips the direction.
-let private header (active: string option) (desc: bool) (col: Column) =
+/// Sorting preserves the current column set and popup state.
+let private header (cols: string list) (menu: bool) (active: string option) (desc: bool) (col: Column) =
     let isActive = active = Some col.Key
     let nextDir = if isActive && not desc then "desc" else "asc"
     let arrow = if isActive then (if desc then " ▼" else " ▲") else ""
 
-    th
-        [ _class (col.HeaderClass + " cursor-pointer select-none hover:underline")
-          _hxGet (sprintf "/players/partial?sort=%s&dir=%s" col.Key nextDir)
-          _hxTarget "#players-table"
-          _hxSwap "outerHTML" ]
-        [ str (col.Label + arrow) ]
+    let attrs =
+        _class (col.HeaderClass + " cursor-pointer select-none hover:underline")
+        :: hxLink cols (Some col.Key) nextDir menu
 
-let private row (p: Player) =
-    tr [ _class "border-b border-line transition-colors hover:bg-row-hover" ] [ for c in columns -> c.Cell p ]
+    th (if col.Full <> "" then attrs @ [ _title col.Full ] else attrs) [ str (col.Label + arrow) ]
 
-/// The swappable roster table (also returned by /players/partial).
-let rosterTable (sort: string option) (desc: bool) (players: Player list) : XmlNode =
+let private row (cols: string list) (p: Player) =
+    tr
+        [ _class "border-b border-line transition-colors hover:bg-row-hover" ]
+        [ for c in activeColumns cols -> c.Cell p ]
+
+// --- Column picker popup -----------------------------------------------------
+
+/// One toggle chip inside the popup: clicking adds or removes its column, keeping
+/// the popup open and the current sort. Selected chips are filled gold; the full
+/// stat name shows as a hover tooltip (the "cursor overlay").
+let private columnToggle (cols: string list) (sort: string option) (desc: bool) (sc: StatCol) =
+    let selected = List.contains sc.Key cols
+
+    let next =
+        if selected then
+            cols |> List.filter (fun k -> k <> sc.Key)
+        else
+            cols @ [ sc.Key ]
+
+    let cls =
+        if selected then
+            "cursor-help rounded-md bg-barracuda-accent px-2 py-1 text-xs font-bold text-barracuda-dark ring-1 ring-barracuda-accent transition-colors"
+        else
+            "cursor-help rounded-md bg-card px-2 py-1 text-xs font-semibold text-ink-strong ring-1 ring-card-ring transition-colors hover:ring-barracuda-accent/70"
+
+    a
+        ([ _class cls; _title sc.Full ] @ hxLink next sort (if desc then "desc" else "asc") true)
+        [ str sc.Label ]
+
+/// The "Columns" button + dropdown panel, grouped batting / fielding / pitching.
+let private columnsMenu (cols: string list) (sort: string option) (desc: bool) (menu: bool) =
+    let group (cat: string) =
+        statCatalog
+        |> List.filter (fun s -> s.Category = cat)
+        |> List.map (columnToggle cols sort desc)
+
+    let summaryAttrs =
+        [ _class
+              "inline-flex cursor-pointer select-none items-center gap-1.5 rounded-md bg-barracuda px-3 py-1.5 text-sm font-semibold text-white ring-1 ring-barracuda-accent/40 transition-colors hover:bg-barracuda-light" ]
+
+    details
+        (if menu then
+             [ _class "relative inline-block"; attr "open" "open" ]
+         else
+             [ _class "relative inline-block" ])
+        [ summary summaryAttrs [ span [ _class "text-base leading-none" ] [ str "⛁" ]; str "Columns" ]
+          div
+              [ _class
+                    "absolute right-0 z-30 mt-2 w-72 max-w-[calc(100vw-2rem)] rounded-lg border border-barracuda-accent/50 bg-page-2 p-3 shadow-xl shadow-black/40" ]
+              [ for cat in [ "Batting"; "Fielding"; "Pitching" ] do
+                    yield
+                        h3
+                            [ _class
+                                  "mt-3 mb-1.5 text-xs font-black uppercase tracking-wider text-accent-text first:mt-0" ]
+                            [ str cat ]
+
+                    yield div [ _class "flex flex-wrap gap-1.5" ] (group cat) ] ]
+
+/// The swappable panel = column picker + roster table (returned by /players/partial).
+let rosterPanel
+    (cols: string list)
+    (sort: string option)
+    (desc: bool)
+    (menu: bool)
+    (players: Player list)
+    : XmlNode =
     div
-        [ _id "players-table"; _class "overflow-x-auto" ]
-        [ table
-              [ _class "w-full min-w-[24rem] text-left text-sm" ]
-              [ thead
-                    [ _class
-                          "border-b border-barracuda-accent/40 text-xs font-bold uppercase tracking-wider text-accent-text" ]
-                    [ tr [] [ for c in columns -> header sort desc c ] ]
-                tbody [] [ for p in applySort sort desc players -> row p ] ] ]
+        [ _id "players-panel" ]
+        [ div [ _class "mb-3 flex justify-end" ] [ columnsMenu cols sort desc menu ]
+          div
+              [ _class "overflow-x-auto" ]
+              [ table
+                    [ _class "w-full min-w-[24rem] text-left text-sm" ]
+                    [ thead
+                          [ _class
+                                "border-b border-barracuda-accent/40 text-xs font-bold uppercase tracking-wider text-accent-text" ]
+                          [ tr [] [ for c in activeColumns cols -> header cols menu sort desc c ] ]
+                      tbody [] [ for p in applySort sort desc players -> row cols p ] ] ] ]
 
-let listView (players: Player list) : XmlNode list =
+/// Full players page. Column set + sort come from the query string so a shared
+/// or refreshed URL keeps the user's selection; the popup always starts closed.
+let listView (cols: string list) (sort: string option) (desc: bool) (players: Player list) : XmlNode list =
     [ pageHeader "Players" "Team roster"
       if List.isEmpty players then
           p
               [ _class "rounded-lg bg-card p-6 text-ink-muted ring-1 ring-card-ring" ]
               [ str "The roster couldn't be loaded right now. Please check back later." ]
       else
-          rosterTable None false players ]
+          rosterPanel cols sort desc false players ]
 
 let private statBox (label: string) (value: string) =
     div

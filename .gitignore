@@ -10,6 +10,7 @@ src/Barracudas.Web/appsettings.Development.json
 
 # Generated assets
 src/Barracudas.Web/wwwroot/css/site.css
+.claude/
 
 # OS
 .DS_Store

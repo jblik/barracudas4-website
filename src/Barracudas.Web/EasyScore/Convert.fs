@@ -171,39 +171,6 @@ let toTeamStats (standings: Standing list) (ourGames: Game list) : Async<Result<
                 Value = (if diff >= 0 then $"+%d{diff}" else string diff) } ]
     }
 
-/// Our roster: the configured active-roster licences. Batting averages come
-/// from the round's offensive stats (players without at-bats have no stats row).
-let toRoster
-    (activeRoster: int list)
-    (dtos: PlayerDto list)
-    (offense: OffenseStatsDto list)
-    : Async<Result<Player list, EasyScoreError>> =
-    asyncResult {
-        let active = Set.ofList activeRoster
-
-        let avgs =
-            offense
-            |> List.map (fun s -> s.PlayerID, s.BA |> Option.defaultValue "")
-            |> Map.ofList
-
-        return
-            [ for p in dtos do
-                  if active.Contains p.ID then
-                      { Id = string p.ID
-                        FirstName = defaultArg p.Name ""
-                        LastName = defaultArg p.Lastname ""
-                        Number =
-                          p.UniformNr
-                          |> Option.bind (fun n ->
-                              match Int32.TryParse n with
-                              | true, v -> Some v
-                              | _ -> None)
-                        Bats = defaultArg p.Bats ""
-                        Throws = defaultArg p.Throws ""
-                        BattingAvg = avgs |> Map.tryFind p.ID } ]
-            |> List.sortBy (fun p -> p.LastName.ToUpperInvariant(), p.FirstName.ToUpperInvariant())
-    }
-
 /// Log dates carry no reliable time component; only the date matters.
 let private logDate (s: string) =
     parseDateTime s |> Option.map _.Date |> Option.defaultValue DateTime.MinValue
@@ -219,6 +186,105 @@ let private logWarningDefaultZero (logger: ILogger) playerId what value =
     |> Option.defaultWith (fun _ ->
         logger.LogWarning("Unable to parse {What} for player {Player}; defaulting to 0", what, playerId)
         0)
+
+/// A player's season batting line from one round-wide offensive stat row.
+let private toBattingStats (logger: ILogger) (playerId: int) (s: OffenseStatsDto) : BattingStats =
+    { Games = s.G |> logWarningDefaultZero logger playerId "Games"
+      PlateAppearances = s.PA |> logWarningDefaultEmpty logger playerId "PlateAppearances"
+      AtBats = s.AB |> logWarningDefaultEmpty logger playerId "AtBats"
+      Runs = s.R |> logWarningDefaultEmpty logger playerId "Runs"
+      Hits = s.H |> logWarningDefaultEmpty logger playerId "Hits"
+      Doubles = s.``2B`` |> logWarningDefaultEmpty logger playerId "Doubles"
+      Triples = s.``3B`` |> logWarningDefaultEmpty logger playerId "Triples"
+      HomeRuns = s.HR |> logWarningDefaultEmpty logger playerId "HomeRuns"
+      RunsBattedIn = s.RBI |> logWarningDefaultEmpty logger playerId "RunsBattedIn"
+      TotalBases = s.TB |> logWarningDefaultEmpty logger playerId "TotalBases"
+      BaseOnBalls = s.BB |> logWarningDefaultEmpty logger playerId "BaseOnBalls"
+      Strikeouts = s.SO |> logWarningDefaultEmpty logger playerId "Strikeouts"
+      HitByPitch = s.HBP |> logWarningDefaultEmpty logger playerId "HitByPitch"
+      StolenBases = s.SB |> logWarningDefaultEmpty logger playerId "StolenBases"
+      CaughtStealing = s.CS |> logWarningDefaultEmpty logger playerId "CaughtStealing"
+      BattingAverage = s.BA |> logWarningDefaultEmpty logger playerId "BattingAverage"
+      OnBasePercentage = s.OBP |> logWarningDefaultEmpty logger playerId "OnBasePercentage"
+      Slugging = s.SLG |> logWarningDefaultEmpty logger playerId "Slugging"
+      OnBasePlusSlugging = s.OPS |> logWarningDefaultEmpty logger playerId "OnBasePlusSlugging" }
+
+/// A player's season fielding line from one round-wide fielding stat row.
+let private toFieldingStats (logger: ILogger) (playerId: int) (s: FieldingStatsDto) : FieldingStats =
+    { Games = s.G |> logWarningDefaultZero logger playerId "Games"
+      Innings = s.InningsPlayed |> logWarningDefaultEmpty logger playerId "Innings"
+      Putouts = s.Putout |> logWarningDefaultEmpty logger playerId "Putouts"
+      Assists = s.Assist |> logWarningDefaultEmpty logger playerId "Assists"
+      OutfieldAssists = s.OutfieldAssists |> logWarningDefaultEmpty logger playerId "OutfieldAssists"
+      Errors = s.Error |> logWarningDefaultEmpty logger playerId "Errors"
+      DoublePlays = s.DP |> logWarningDefaultEmpty logger playerId "DoublePlays"
+      PassedBalls = s.PB |> logWarningDefaultEmpty logger playerId "PassedBalls"
+      StealAttempts = s.SBAtt |> logWarningDefaultEmpty logger playerId "StealAttempts"
+      CaughtStealing = s.CSMade |> logWarningDefaultEmpty logger playerId "CaughtStealing"
+      RangeFactor = s.RangeFactor |> logWarningDefaultEmpty logger playerId "RangeFactor"
+      FieldingPct = s.FPct |> logWarningDefaultEmpty logger playerId "FieldingPct" }
+
+/// A player's season pitching line from one round-wide pitching stat row.
+let private toPitchingStats (logger: ILogger) (playerId: int) (s: PitchingStatsDto) : PitchingStats =
+    let wins = s.W |> logWarningDefaultEmpty logger playerId "Wins"
+    let losses = s.L |> logWarningDefaultEmpty logger playerId "Losses"
+
+    { Games = s.G |> logWarningDefaultEmpty logger playerId "Games"
+      Starts = s.GS |> logWarningDefaultEmpty logger playerId "Starts"
+      InningsPitched = s.IP |> logWarningDefaultEmpty logger playerId "InningsPitched"
+      HitsAllowed = s.HA |> logWarningDefaultEmpty logger playerId "HitsAllowed"
+      RunsAllowed = s.RA |> logWarningDefaultEmpty logger playerId "RunsAllowed"
+      EarnedRuns = s.ER |> logWarningDefaultEmpty logger playerId "EarnedRuns"
+      BaseOnBalls = s.BBA |> logWarningDefaultEmpty logger playerId "BaseOnBalls"
+      Strikeouts = s.K |> logWarningDefaultEmpty logger playerId "Strikeouts"
+      HitBatters = s.HBPA |> logWarningDefaultEmpty logger playerId "HitBatters"
+      WildPitches = s.WP |> logWarningDefaultEmpty logger playerId "WildPitches"
+      Record = $"{wins}–{losses}"
+      Saves = s.SV |> logWarningDefaultEmpty logger playerId "Saves"
+      BattersFaced = s.BF |> logWarningDefaultEmpty logger playerId "BattersFaced"
+      OpponentBattingAverage = s.OppAVG |> logWarningDefaultEmpty logger playerId "OpponentBattingAverage"
+      WalksHitsPerInningPitched = s.WHIP |> logWarningDefaultEmpty logger playerId "WalksHitsPerInningPitched"
+      EarnedRunAverage = s.ERA |> logWarningDefaultEmpty logger playerId "EarnedRunAverage" }
+
+/// Our roster: the configured active-roster licences, each joined to its
+/// round-wide season batting/fielding/pitching lines (a section is None when
+/// the player has no row in that category, e.g. no at-bats or never pitched).
+let toRoster
+    (logger: ILogger)
+    (activeRoster: int list)
+    (dtos: PlayerDto list)
+    (offense: OffenseStatsDto list)
+    (fielding: FieldingStatsDto list)
+    (pitching: PitchingStatsDto list)
+    : Async<Result<Player list, EasyScoreError>> =
+    asyncResult {
+        let active = Set.ofList activeRoster
+        let offMap = offense |> List.map (fun s -> s.PlayerID, s) |> Map.ofList
+        let fldMap = fielding |> List.map (fun s -> s.PlayerID, s) |> Map.ofList
+        let pitMap = pitching |> List.map (fun s -> s.PlayerID, s) |> Map.ofList
+
+        return
+            [ for p in dtos do
+                  if active.Contains p.ID then
+                      let batting = offMap |> Map.tryFind p.ID |> Option.map (toBattingStats logger p.ID)
+
+                      { Id = string p.ID
+                        FirstName = defaultArg p.Name ""
+                        LastName = defaultArg p.Lastname ""
+                        Number =
+                          p.UniformNr
+                          |> Option.bind (fun n ->
+                              match Int32.TryParse n with
+                              | true, v -> Some v
+                              | _ -> None)
+                        Bats = defaultArg p.Bats ""
+                        Throws = defaultArg p.Throws ""
+                        BattingAvg = batting |> Option.map _.BattingAverage
+                        Batting = batting
+                        Fielding = fldMap |> Map.tryFind p.ID |> Option.map (toFieldingStats logger p.ID)
+                        Pitching = pitMap |> Map.tryFind p.ID |> Option.map (toPitchingStats logger p.ID) } ]
+            |> List.sortBy (fun p -> p.LastName.ToUpperInvariant(), p.FirstName.ToUpperInvariant())
+    }
 
 /// A player's season stat lines, picked out of the round-wide stat lists,
 /// plus the per-game logs (already filtered to the player by the API).
@@ -236,68 +302,17 @@ let toPlayerStats
         let batting =
             offense
             |> List.tryFind (fun s -> s.PlayerID = playerId)
-            |> Option.map (fun s ->
-                { Games = s.G |> logWarningDefaultZero logger playerId "Games"
-                  PlateAppearances = s.PA |> logWarningDefaultEmpty logger playerId "PlateAppearances"
-                  AtBats = s.AB |> logWarningDefaultEmpty logger playerId "AtBats"
-                  Runs = s.R |> logWarningDefaultEmpty logger playerId "Runs"
-                  Hits = s.H |> logWarningDefaultEmpty logger playerId "Hits"
-                  Doubles = s.``2B`` |> logWarningDefaultEmpty logger playerId "Doubles"
-                  Triples = s.``3B`` |> logWarningDefaultEmpty logger playerId "Triples"
-                  HomeRuns = s.HR |> logWarningDefaultEmpty logger playerId "HomeRuns"
-                  RunsBattedIn = s.RBI |> logWarningDefaultEmpty logger playerId "RunsBattedIn"
-                  TotalBases = s.TB |> logWarningDefaultEmpty logger playerId "TotalBases"
-                  BaseOnBalls = s.BB |> logWarningDefaultEmpty logger playerId "BaseOnBalls"
-                  Strikeouts = s.SO |> logWarningDefaultEmpty logger playerId "Strikeouts"
-                  HitByPitch = s.HBP |> logWarningDefaultEmpty logger playerId "HitByPitch"
-                  StolenBases = s.SB |> logWarningDefaultEmpty logger playerId "StolenBases"
-                  CaughtStealing = s.CS |> logWarningDefaultEmpty logger playerId "CaughtStealing"
-                  BattingAverage = s.BA |> logWarningDefaultEmpty logger playerId "BattingAverage"
-                  OnBasePercentage = s.OBP |> logWarningDefaultEmpty logger playerId "OnBasePercentage"
-                  Slugging = s.SLG |> logWarningDefaultEmpty logger playerId "Slugging"
-                  OnBasePlusSlugging = s.OPS |> logWarningDefaultEmpty logger playerId "OnBasePlusSlugging" })
+            |> Option.map (toBattingStats logger playerId)
 
         let field =
             fielding
             |> List.tryFind (fun s -> s.PlayerID = playerId)
-            |> Option.map (fun s ->
-                { Games = s.G |> logWarningDefaultZero logger playerId "Games"
-                  Innings = s.InningsPlayed |> logWarningDefaultEmpty logger playerId "Innings"
-                  Putouts = s.Putout |> logWarningDefaultEmpty logger playerId "Putouts"
-                  Assists = s.Assist |> logWarningDefaultEmpty logger playerId "Assists"
-                  OutfieldAssists = s.OutfieldAssists |> logWarningDefaultEmpty logger playerId "OutfieldAssists"
-                  Errors = s.Error |> logWarningDefaultEmpty logger playerId "Errors"
-                  DoublePlays = s.DP |> logWarningDefaultEmpty logger playerId "DoublePlays"
-                  PassedBalls = s.PB |> logWarningDefaultEmpty logger playerId "PassedBalls"
-                  StealAttempts = s.SBAtt |> logWarningDefaultEmpty logger playerId "StealAttempts"
-                  CaughtStealing = s.CSMade |> logWarningDefaultEmpty logger playerId "CaughtStealing"
-                  RangeFactor = s.RangeFactor |> logWarningDefaultEmpty logger playerId "RangeFactor"
-                  FieldingPct = s.FPct |> logWarningDefaultEmpty logger playerId "FieldingPct" })
+            |> Option.map (toFieldingStats logger playerId)
 
         let pitch =
             pitching
             |> List.tryFind (fun s -> s.PlayerID = playerId)
-            |> Option.map (fun s ->
-                let wins = s.W |> logWarningDefaultEmpty logger playerId "Wins"
-                let losses = s.L |> logWarningDefaultEmpty logger playerId "Losses"
-
-                { Games = s.G |> logWarningDefaultEmpty logger playerId "Games"
-                  Starts = s.GS |> logWarningDefaultEmpty logger playerId "Starts"
-                  InningsPitched = s.IP |> logWarningDefaultEmpty logger playerId "InningsPitched"
-                  HitsAllowed = s.HA |> logWarningDefaultEmpty logger playerId "HitsAllowed"
-                  RunsAllowed = s.RA |> logWarningDefaultEmpty logger playerId "RunsAllowed"
-                  EarnedRuns = s.ER |> logWarningDefaultEmpty logger playerId "EarnedRuns"
-                  BaseOnBalls = s.BBA |> logWarningDefaultEmpty logger playerId "BaseOnBalls"
-                  Strikeouts = s.K |> logWarningDefaultEmpty logger playerId "Strikeouts"
-                  HitBatters = s.HBPA |> logWarningDefaultEmpty logger playerId "HitBatters"
-                  WildPitches = s.WP |> logWarningDefaultEmpty logger playerId "WildPitches"
-                  Record = $"{wins}–{losses}"
-                  Saves = s.SV |> logWarningDefaultEmpty logger playerId "Saves"
-                  BattersFaced = s.BF |> logWarningDefaultEmpty logger playerId "BattersFaced"
-                  OpponentBattingAverage = s.OppAVG |> logWarningDefaultEmpty logger playerId "OpponentBattingAverage"
-                  WalksHitsPerInningPitched =
-                    s.WHIP |> logWarningDefaultEmpty logger playerId "WalksHitsPerInningPitched"
-                  EarnedRunAverage = s.ERA |> logWarningDefaultEmpty logger playerId "EarnedRunAverage" })
+            |> Option.map (toPitchingStats logger playerId)
 
         let batLog =
             [ for e in battingLog ->

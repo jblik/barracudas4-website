@@ -54,10 +54,8 @@ type OffenseStatsDto =
       R: string option
       H: string option
       RBI: string option
-      [<JsonPropertyName "2B">]
-      Doubles: string option
-      [<JsonPropertyName "3B">]
-      Triples: string option
+      ``2B``: string option
+      ``3B``: string option
       HR: string option
       TB: string option
       BB: string option
@@ -121,10 +119,8 @@ type BattingLogDto =
       AB: string
       R: string
       H: string
-      [<JsonPropertyName "2B">]
-      Doubles: string
-      [<JsonPropertyName "3B">]
-      Triples: string
+      ``2B``: string
+      ``3B``: string
       HR: string
       RBI: string
       BB: string
@@ -192,8 +188,7 @@ type PitchingLogDto =
 /// One side of a linescore entry (GET /games?id=…). `line` is keyed by inning
 /// number; values are ints, or the string "x" when the side didn't bat.
 type LineScoreSideDto =
-    {
-      [<JsonPropertyName "abbr">]
+    { [<JsonPropertyName "abbr">]
       TeamAbbreviation: string
       [<JsonPropertyName "team">]
       TeamName: string

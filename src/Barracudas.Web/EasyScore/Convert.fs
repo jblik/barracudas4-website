@@ -208,16 +208,16 @@ let toRoster
 let private logDate (s: string) =
     parseDateTime s |> Option.map _.Date |> Option.defaultValue DateTime.MinValue
 
-let private logWarningDefaultEmpty (logger: ILogger) playerId what =
-    what
+let private logWarningDefaultEmpty (logger: ILogger) playerId what value =
+    value
     |> Option.defaultWith (fun _ ->
-        logger.LogWarning("Unable to parse {What} for player {Player}; defaulting to \"\"", nameof what, playerId)
+        logger.LogWarning("Unable to parse {What} for player {Player}; defaulting to \"\"", what, playerId)
         "")
 
-let private logWarningDefaultZero (logger: ILogger) playerId what =
-    what
+let private logWarningDefaultZero (logger: ILogger) playerId what value =
+    value
     |> Option.defaultWith (fun _ ->
-        logger.LogWarning("Unable to parse {What} for player {Player}; defaulting to 0", nameof what, playerId)
+        logger.LogWarning("Unable to parse {What} for player {Player}; defaulting to 0", what, playerId)
         0)
 
 /// A player's season stat lines, picked out of the round-wide stat lists,
@@ -237,90 +237,93 @@ let toPlayerStats
             offense
             |> List.tryFind (fun s -> s.PlayerID = playerId)
             |> Option.map (fun s ->
-                { Games = s.G |> logWarningDefaultZero logger playerId
-                  PA = s.PA |> logWarningDefaultEmpty logger playerId
-                  AB = s.AB |> logWarningDefaultEmpty logger playerId
-                  R = s.R |> logWarningDefaultEmpty logger playerId
-                  H = s.H |> logWarningDefaultEmpty logger playerId
-                  Doubles = s.Doubles |> logWarningDefaultEmpty logger playerId
-                  Triples = s.Triples |> logWarningDefaultEmpty logger playerId
-                  HR = s.HR |> logWarningDefaultEmpty logger playerId
-                  RBI = s.RBI |> logWarningDefaultEmpty logger playerId
-                  TB = s.TB |> logWarningDefaultEmpty logger playerId
-                  BB = s.BB |> logWarningDefaultEmpty logger playerId
-                  SO = s.SO |> logWarningDefaultEmpty logger playerId
-                  HBP = s.HBP |> logWarningDefaultEmpty logger playerId
-                  SB = s.SB |> logWarningDefaultEmpty logger playerId
-                  CS = s.CS |> logWarningDefaultEmpty logger playerId
-                  AVG = s.BA |> logWarningDefaultEmpty logger playerId
-                  OBP = s.OBP |> logWarningDefaultEmpty logger playerId
-                  SLG = s.SLG |> logWarningDefaultEmpty logger playerId
-                  OPS = s.OPS |> logWarningDefaultEmpty logger playerId })
+                { Games = s.G |> logWarningDefaultZero logger playerId "Games"
+                  PlateAppearances = s.PA |> logWarningDefaultEmpty logger playerId "PlateAppearances"
+                  AtBats = s.AB |> logWarningDefaultEmpty logger playerId "AtBats"
+                  Runs = s.R |> logWarningDefaultEmpty logger playerId "Runs"
+                  Hits = s.H |> logWarningDefaultEmpty logger playerId "Hits"
+                  Doubles = s.``2B`` |> logWarningDefaultEmpty logger playerId "Doubles"
+                  Triples = s.``3B`` |> logWarningDefaultEmpty logger playerId "Triples"
+                  HomeRuns = s.HR |> logWarningDefaultEmpty logger playerId "HomeRuns"
+                  RunsBattedIn = s.RBI |> logWarningDefaultEmpty logger playerId "RunsBattedIn"
+                  TotalBases = s.TB |> logWarningDefaultEmpty logger playerId "TotalBases"
+                  BaseOnBalls = s.BB |> logWarningDefaultEmpty logger playerId "BaseOnBalls"
+                  Strikeouts = s.SO |> logWarningDefaultEmpty logger playerId "Strikeouts"
+                  HitByPitch = s.HBP |> logWarningDefaultEmpty logger playerId "HitByPitch"
+                  StolenBases = s.SB |> logWarningDefaultEmpty logger playerId "StolenBases"
+                  CaughtStealing = s.CS |> logWarningDefaultEmpty logger playerId "CaughtStealing"
+                  BattingAverage = s.BA |> logWarningDefaultEmpty logger playerId "BattingAverage"
+                  OnBasePercentage = s.OBP |> logWarningDefaultEmpty logger playerId "OnBasePercentage"
+                  Slugging = s.SLG |> logWarningDefaultEmpty logger playerId "Slugging"
+                  OnBasePlusSlugging = s.OPS |> logWarningDefaultEmpty logger playerId "OnBasePlusSlugging" })
 
         let field =
             fielding
             |> List.tryFind (fun s -> s.PlayerID = playerId)
             |> Option.map (fun s ->
-                { Games = s.G |> logWarningDefaultZero logger playerId
-                  Innings = s.InningsPlayed |> logWarningDefaultEmpty logger playerId
-                  Putouts = s.Putout |> logWarningDefaultEmpty logger playerId
-                  Assists = s.Assist |> logWarningDefaultEmpty logger playerId
-                  OutfieldAssists = s.OutfieldAssists |> logWarningDefaultEmpty logger playerId
-                  Errors = s.Error |> logWarningDefaultEmpty logger playerId
-                  DoublePlays = s.DP |> logWarningDefaultEmpty logger playerId
-                  PassedBalls = s.PB |> logWarningDefaultEmpty logger playerId
-                  StealAttempts = s.SBAtt |> logWarningDefaultEmpty logger playerId
-                  CaughtStealing = s.CSMade |> logWarningDefaultEmpty logger playerId
-                  RangeFactor = s.RangeFactor |> logWarningDefaultEmpty logger playerId
-                  FieldingPct = s.FPct |> logWarningDefaultEmpty logger playerId })
+                { Games = s.G |> logWarningDefaultZero logger playerId "Games"
+                  Innings = s.InningsPlayed |> logWarningDefaultEmpty logger playerId "Innings"
+                  Putouts = s.Putout |> logWarningDefaultEmpty logger playerId "Putouts"
+                  Assists = s.Assist |> logWarningDefaultEmpty logger playerId "Assists"
+                  OutfieldAssists = s.OutfieldAssists |> logWarningDefaultEmpty logger playerId "OutfieldAssists"
+                  Errors = s.Error |> logWarningDefaultEmpty logger playerId "Errors"
+                  DoublePlays = s.DP |> logWarningDefaultEmpty logger playerId "DoublePlays"
+                  PassedBalls = s.PB |> logWarningDefaultEmpty logger playerId "PassedBalls"
+                  StealAttempts = s.SBAtt |> logWarningDefaultEmpty logger playerId "StealAttempts"
+                  CaughtStealing = s.CSMade |> logWarningDefaultEmpty logger playerId "CaughtStealing"
+                  RangeFactor = s.RangeFactor |> logWarningDefaultEmpty logger playerId "RangeFactor"
+                  FieldingPct = s.FPct |> logWarningDefaultEmpty logger playerId "FieldingPct" })
 
         let pitch =
             pitching
             |> List.tryFind (fun s -> s.PlayerID = playerId)
             |> Option.map (fun s ->
-                { Games = s.G |> logWarningDefaultEmpty logger playerId
-                  Starts = s.GS |> logWarningDefaultEmpty logger playerId
-                  IP = s.IP |> logWarningDefaultEmpty logger playerId
-                  H = s.HA |> logWarningDefaultEmpty logger playerId
-                  R = s.RA |> logWarningDefaultEmpty logger playerId
-                  ER = s.ER |> logWarningDefaultEmpty logger playerId
-                  BB = s.BBA |> logWarningDefaultEmpty logger playerId
-                  SO = s.K |> logWarningDefaultEmpty logger playerId
-                  HBP = s.HBPA |> logWarningDefaultEmpty logger playerId
-                  WildPitches = s.WP |> logWarningDefaultEmpty logger playerId
-                  Record =
-                    $"%s{s.W |> logWarningDefaultEmpty logger playerId}–%s{s.L |> logWarningDefaultEmpty logger playerId}"
-                  Saves = s.SV |> logWarningDefaultEmpty logger playerId
-                  BattersFaced = s.BF |> logWarningDefaultEmpty logger playerId
-                  OppAVG = s.OppAVG |> logWarningDefaultEmpty logger playerId
-                  WHIP = s.WHIP |> logWarningDefaultEmpty logger playerId
-                  ERA = s.ERA |> logWarningDefaultEmpty logger playerId })
+                let wins = s.W |> logWarningDefaultEmpty logger playerId "Wins"
+                let losses = s.L |> logWarningDefaultEmpty logger playerId "Losses"
+
+                { Games = s.G |> logWarningDefaultEmpty logger playerId "Games"
+                  Starts = s.GS |> logWarningDefaultEmpty logger playerId "Starts"
+                  InningsPitched = s.IP |> logWarningDefaultEmpty logger playerId "InningsPitched"
+                  HitsAllowed = s.HA |> logWarningDefaultEmpty logger playerId "HitsAllowed"
+                  RunsAllowed = s.RA |> logWarningDefaultEmpty logger playerId "RunsAllowed"
+                  EarnedRuns = s.ER |> logWarningDefaultEmpty logger playerId "EarnedRuns"
+                  BaseOnBalls = s.BBA |> logWarningDefaultEmpty logger playerId "BaseOnBalls"
+                  Strikeouts = s.K |> logWarningDefaultEmpty logger playerId "Strikeouts"
+                  HitBatters = s.HBPA |> logWarningDefaultEmpty logger playerId "HitBatters"
+                  WildPitches = s.WP |> logWarningDefaultEmpty logger playerId "WildPitches"
+                  Record = $"{wins}–{losses}"
+                  Saves = s.SV |> logWarningDefaultEmpty logger playerId "Saves"
+                  BattersFaced = s.BF |> logWarningDefaultEmpty logger playerId "BattersFaced"
+                  OpponentBattingAverage = s.OppAVG |> logWarningDefaultEmpty logger playerId "OpponentBattingAverage"
+                  WalksHitsPerInningPitched =
+                    s.WHIP |> logWarningDefaultEmpty logger playerId "WalksHitsPerInningPitched"
+                  EarnedRunAverage = s.ERA |> logWarningDefaultEmpty logger playerId "EarnedRunAverage" })
 
         let batLog =
             [ for e in battingLog ->
                   { Date = logDate e.Date
                     Opponent = e.Opponent
                     Spot = e.Spot
-                    Pos = e.Pos
-                    AB = e.AB
-                    R = e.R
-                    H = e.H
-                    Doubles = e.Doubles
-                    Triples = e.Triples
-                    HR = e.HR
-                    RBI = e.RBI
-                    BB = e.BB
-                    SO = e.SO
-                    SB = e.SB
-                    CS = e.CS
-                    HBP = e.HBP
-                    Sac = e.S
-                    SacFlies = e.SF
-                    GIDP = e.GIDP
+                    PositionsPlayed = e.Pos
+                    AtBats = e.AB
+                    Runs = e.R
+                    Hits = e.H
+                    Doubles = e.``2B``
+                    Triples = e.``3B``
+                    HomeRuns = e.HR
+                    RunsBattedIn = e.RBI
+                    BaseOnBalls = e.BB
+                    StrikeOuts = e.SO
+                    StolenBases = e.SB
+                    CaughtStealing = e.CS
+                    HitByPitches = e.HBP
+                    SacrificeBunts = e.S
+                    SacrificeFlies = e.SF
+                    GroundedIntoDoublePlay = e.GIDP
                     TwoOutRBI = e.TwoOutRBI
-                    RISP = e.RISP
+                    RunnersInScoringPosition = e.RISP
                     GameScore = e.Gsc
-                    AvgToDate = e.BA } ]
+                    BattingAverageSeasonToDate = e.BA } ]
 
         let fldLog =
             [ for e in fieldingLog ->
@@ -343,13 +346,13 @@ let toPlayerStats
             [ for e in pitchingLog ->
                   { Date = logDate e.Date
                     Opponent = e.Opponent
-                    IP = e.IP
-                    H = e.H
-                    R = e.R
-                    ER = e.ER
-                    BB = e.BB
-                    SO = e.K
-                    HBP = e.HBP
+                    InningsPitched = e.IP
+                    HitsAllowed = e.H
+                    RunsAllowed = e.R
+                    EarnedRuns = e.ER
+                    BaseOnBalls = e.BB
+                    Strikeouts = e.K
+                    HitBatters = e.HBP
                     WildPitches = e.WP
                     Balks = e.BK
                     GroundBalls = e.GB
@@ -399,15 +402,15 @@ let private toBatter logger (h: BoxHitterDto) : BoxBatter =
     { Order = (if h.Spot = 100 then None else Some h.Spot)
       PlayerId = h.playerID
       IsSub = h.SubbedIn |> Option.bind blankToNone |> Option.isSome
-      Pos = h.Pos
+      Position = h.Pos
       Name = h.playerName
-      AB = h.AB |> logWarningDefaultZero logger h.playerID
-      R = h.R |> logWarningDefaultZero logger h.playerID
-      H = h.H |> logWarningDefaultZero logger h.playerID
-      RBI = h.RBI |> logWarningDefaultZero logger h.playerID
-      BB = h.BB |> logWarningDefaultZero logger h.playerID
-      SO = h.SO |> logWarningDefaultZero logger h.playerID
-      LOB = h.LOB |> logWarningDefaultZero logger h.playerID
+      AtBats = h.AB |> logWarningDefaultZero logger h.playerID "AB"
+      Runs = h.R |> logWarningDefaultZero logger h.playerID "R"
+      Hits = h.H |> logWarningDefaultZero logger h.playerID "H"
+      RunsBattedIn = h.RBI |> logWarningDefaultZero logger h.playerID "RBI"
+      BaseOnBalls = h.BB |> logWarningDefaultZero logger h.playerID "BB"
+      Strikeouts = h.SO |> logWarningDefaultZero logger h.playerID "SO"
+      LeftOnBase = h.LOB |> logWarningDefaultZero logger h.playerID "LOB"
       Avg = defaultArg h.BA "" }
 
 let private toPitcher (p: BoxPitcherDto) : BoxPitcher =
@@ -415,17 +418,17 @@ let private toPitcher (p: BoxPitcherDto) : BoxPitcher =
 
     { Name = (if isTotals then "Totals" else p.playerName)
       IsTotals = isTotals
-      IP = p.IP
-      H = p.HA
-      R = p.RA
-      ER = p.ER
-      BB = p.BBA
-      SO = p.K
-      HR = p.HRA
+      InningsPitched = p.IP
+      Hits = p.HA
+      RunsAllowed = p.RA
+      EarnedRuns = p.ER
+      BaseOnBalls = p.BBA
+      Strikeouts = p.K
+      HomeRunsAllowed = p.HRA
       BattersFaced = p.BF
       Pitches = p.PitchCount
       Strikes = p.Strikes
-      ERA = p.ERA }
+      EarnedRunAverage = p.ERA }
 
 /// Build a game note (away = T, home = B); None when neither side has text.
 let private boxNote (label: string) (d: BoxNoteDto option) : BoxNote option =

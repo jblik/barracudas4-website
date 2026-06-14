@@ -69,24 +69,24 @@ type Player =
 /// Season batting line (values pre-formatted by EasyScore).
 type BattingStats =
     { Games: int
-      PA: string
-      AB: string
-      R: string
-      H: string
+      PlateAppearances: string
+      AtBats: string
+      Runs: string
+      Hits: string
       Doubles: string
       Triples: string
-      HR: string
-      RBI: string
-      TB: string
-      BB: string
-      SO: string
-      HBP: string
-      SB: string
-      CS: string
-      AVG: string
-      OBP: string
-      SLG: string
-      OPS: string }
+      HomeRuns: string
+      RunsBattedIn: string
+      TotalBases: string
+      BaseOnBalls: string
+      Strikeouts: string
+      HitByPitch: string
+      StolenBases: string
+      CaughtStealing: string
+      BattingAverage: string
+      OnBasePercentage: string
+      Slugging: string
+      OnBasePlusSlugging: string }
 
 /// Season fielding line.
 type FieldingStats =
@@ -107,20 +107,20 @@ type FieldingStats =
 type PitchingStats =
     { Games: string
       Starts: string
-      IP: string
-      H: string
-      R: string
-      ER: string
-      BB: string
-      SO: string
-      HBP: string
+      InningsPitched: string
+      HitsAllowed: string
+      RunsAllowed: string
+      EarnedRuns: string
+      BaseOnBalls: string
+      Strikeouts: string
+      HitBatters: string
       WildPitches: string
       Record: string
       Saves: string
       BattersFaced: string
-      OppAVG: string
-      WHIP: string
-      ERA: string }
+      OpponentBattingAverage: string
+      WalksHitsPerInningPitched: string
+      EarnedRunAverage: string }
 
 /// One game's batting line from the player's game log (newest first).
 type BattingLogEntry =
@@ -129,28 +129,28 @@ type BattingLogEntry =
       /// Batting-order spot, e.g. "4".
       Spot: string
       /// Positions played, e.g. "DH,P,SS".
-      Pos: string
-      AB: string
-      R: string
-      H: string
+      PositionsPlayed: string
+      AtBats: string
+      Runs: string
+      Hits: string
       Doubles: string
       Triples: string
-      HR: string
-      RBI: string
-      BB: string
-      SO: string
-      SB: string
-      CS: string
-      HBP: string
-      Sac: string
-      SacFlies: string
-      GIDP: string
+      HomeRuns: string
+      RunsBattedIn: string
+      BaseOnBalls: string
+      StrikeOuts: string
+      StolenBases: string
+      CaughtStealing: string
+      HitByPitches: string
+      SacrificeBunts: string
+      SacrificeFlies: string
+      GroundedIntoDoublePlay: string
       TwoOutRBI: string
       /// Hits with runners in scoring position, e.g. "1/3".
-      RISP: string
+      RunnersInScoringPosition: string
       GameScore: string
       /// Season batting average through this game.
-      AvgToDate: string }
+      BattingAverageSeasonToDate: string }
 
 /// One game's fielding line from the player's game log (newest first).
 type FieldingLogEntry =
@@ -175,13 +175,13 @@ type FieldingLogEntry =
 type PitchingLogEntry =
     { Date: DateTime
       Opponent: string
-      IP: string
-      H: string
-      R: string
-      ER: string
-      BB: string
-      SO: string
-      HBP: string
+      InningsPitched: string
+      HitsAllowed: string
+      RunsAllowed: string
+      EarnedRuns: string
+      BaseOnBalls: string
+      Strikeouts: string
+      HitBatters: string
       WildPitches: string
       Balks: string
       GroundBalls: string
@@ -233,16 +233,16 @@ type BoxBatter =
       PlayerId: int option
       /// True for a substitute (indented under the player they replaced).
       IsSub: bool
-      Pos: string
+      Position: string
       /// "Lastname Firstname", as scored.
       Name: string
-      AB: int
-      R: int
-      H: int
-      RBI: int
-      BB: int
-      SO: int
-      LOB: int
+      AtBats: int
+      Runs: int
+      Hits: int
+      RunsBattedIn: int
+      BaseOnBalls: int
+      Strikeouts: int
+      LeftOnBase: int
       /// Season batting average through this game ("" → no at-bats yet).
       Avg: string }
 
@@ -252,18 +252,18 @@ type BoxPitcher =
       Name: string
       /// True for the team totals row.
       IsTotals: bool
-      IP: string
-      H: int
-      R: int
-      ER: int
-      BB: int
-      SO: int
-      HR: int
+      InningsPitched: string
+      Hits: int
+      RunsAllowed: int
+      EarnedRuns: int
+      BaseOnBalls: int
+      Strikeouts: int
+      HomeRunsAllowed: int
       BattersFaced: int
       Pitches: int
       Strikes: int
       /// Season ERA through this game.
-      ERA: string }
+      EarnedRunAverage: string }
 
 /// One side's batting + pitching lines in a box score. Batters end with the
 /// team totals row (Order = None).

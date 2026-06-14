@@ -92,6 +92,12 @@ module StatCategory =
         | Offense -> "off"
         | Fielding -> "fld"
         | Pitching -> "pit"
+    let toString =
+        function
+        | Offense -> "Batting"
+        | Fielding -> "Fielding"
+        | Pitching -> "Pitching"
+
 
 /// Per-player season statistics of a round (one row per player with stats).
 type StatsApi(http: HttpClient) =

@@ -372,8 +372,8 @@ let private lineCell (e: JsonElement) =
     | _ -> ""
 
 let private toLineTeam (s: LineScoreSideDto) (innings: int) : LineScoreTeam =
-    { Name = s.team
-      Abbr = s.abbr
+    { Name = s.TeamName
+      Abbr = s.TeamAbbreviation
       Logo = s.logo |> Option.bind blankToNone
       Innings =
         [ for i in 1..innings ->
@@ -471,14 +471,14 @@ let toBoxScore
                 head
                 |> Option.bind (fun d -> d.LineScore |> List.tryHead)
                 |> Option.map (fun ls ->
-                    let n =
+                    let inningsPlayed =
                         match Int32.TryParse ls.innings with
                         | true, v -> v
                         | _ -> List.max [ ls.away.line.Count; ls.home.line.Count; 1 ]
 
-                    { Innings = n
-                      Away = toLineTeam ls.away n
-                      Home = toLineTeam ls.home n })
+                    { Innings = inningsPlayed
+                      Away = toLineTeam ls.away inningsPlayed
+                      Home = toLineTeam ls.home inningsPlayed })
 
             let team name abbr logo isUs hitters pits : BoxTeam =
                 { Name = name
@@ -514,8 +514,8 @@ let toBoxScore
                       Umpires = b.GameInfo.Misc.Umpires
                       Scorer = b.GameInfo.Misc.Scorer
                       LineScore = lineScore
-                      Away = team b.AwayTeam b.AwayTeamAbbr b.AwayTeamLogo awayIsUs (side "T") (pitchers "T")
-                      Home = team b.HomeTeam b.HomeTeamAbbr b.HomeTeamLogo homeIsUs (side "B") (pitchers "B")
+                      Away = team b.AwayTeamName b.AwayTeamAbbr b.AwayTeamLogo awayIsUs (side "T") (pitchers "T")
+                      Home = team b.HomeTeamName b.HomeTeamAbbr b.HomeTeamLogo homeIsUs (side "B") (pitchers "B")
                       Notes = notes }
     }
 

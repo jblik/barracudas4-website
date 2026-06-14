@@ -99,6 +99,7 @@ type EasyScoreApiClient(http: HttpClient, config: Config.AppConfig) =
                 match System.Int32.TryParse id with
                 | true, v -> Ok v
                 | _ -> Error(ConvertError $"invalid player id '%s{id}'")
+
             let! roundId = roundId ()
             let! offense = statsApi.Offense(config.Season, config.LeagueId, roundId)
             let! fielding = statsApi.Fielding(config.Season, config.LeagueId, roundId)
@@ -106,7 +107,10 @@ type EasyScoreApiClient(http: HttpClient, config: Config.AppConfig) =
             let! battingLog = statsApi.OffenseLog(config.Season, config.LeagueId, roundId, playerId)
             let! fieldingLog = statsApi.FieldingLog(config.Season, config.LeagueId, roundId, playerId)
             let! pitchingLog = statsApi.PitchingLog(config.Season, config.LeagueId, roundId, playerId)
-            return! playerId |> Convert.toPlayerStats logger offense fielding pitching battingLog fieldingLog pitchingLog
+
+            return!
+                playerId
+                |> Convert.toPlayerStats logger offense fielding pitching battingLog fieldingLog pitchingLog
         }
 
     /// A completed game's box score: linescore from /games, lines from /stats?box.
@@ -115,24 +119,37 @@ type EasyScoreApiClient(http: HttpClient, config: Config.AppConfig) =
             let! gameId =
                 match System.Int32.TryParse id with
                 | true, v -> Ok v
-                | _ -> Error(ConvertError $"invalid game id '%s{id}'")
+                | _ -> $"invalid game id '%s{id}'" |> ConvertError |> Error
+
             let! detail = gamesApi.ById gameId
             let! box = statsApi.BoxScore gameId
-            // Opponent's brand colour tints their game notes; a failed/empty
-            // colour fetch must not sink the whole box score.
+            // Opponent's brand color tints their game notes; a failed/empty
+            // color fetch must not sink the whole box score.
             let opponentId =
                 detail
                 |> List.tryHead
-                |> Option.map (fun d -> if d.AwayTeam = config.TeamId then d.HomeTeam else d.AwayTeam)
+                |> Option.map (fun d ->
+                    if d.AwayTeam = config.TeamId then
+                        d.HomeTeam
+                    else
+                        d.AwayTeam)
+
             let! opponentColor =
                 match opponentId with
                 | Some oid ->
                     async {
                         match! teamsApi.ById oid with
-                        | Ok ts -> return Ok(ts |> List.tryHead |> Option.bind (fun t -> t.MainColor) |> Option.filter (fun c -> c <> ""))
+                        | Ok ts ->
+                            return
+                                ts
+                                |> List.tryHead
+                                |> Option.bind (fun t -> t.MainColor)
+                                |> Option.filter (fun c -> c <> "")
+                                |> Ok
                         | Error _ -> return Ok None
                     }
                 | None -> async { return Ok None }
+
             return! Convert.toBoxScore config.TeamId gameId opponentColor detail box
         }
 
@@ -144,11 +161,13 @@ type EasyScoreApiClient(http: HttpClient, config: Config.AppConfig) =
         member _.GetStandings() = toTask (standings ())
 
         member _.GetTeamStats() =
-            toTask (asyncResult {
-                let! table = standings ()
-                let! games = ourGames config.Season
-                return! Convert.toTeamStats table games
-            })
+            toTask (
+                asyncResult {
+                    let! table = standings ()
+                    let! games = ourGames config.Season
+                    return! Convert.toTeamStats table games
+                }
+            )
 
         member _.GetPlayers() = toTask (roster ())
 
@@ -157,10 +176,12 @@ type EasyScoreApiClient(http: HttpClient, config: Config.AppConfig) =
         member _.GetBoxScore id = toTask (boxScore id)
 
         member _.GetLiveGame() =
-            toTask (asyncResult {
-                let! games = leagueGames config.Season
-                return! Convert.toLiveGame config.TeamId games
-            })
+            toTask (
+                asyncResult {
+                    let! games = leagueGames config.Season
+                    return! Convert.toLiveGame config.TeamId games
+                }
+            )
 
 /// IEasyScoreClient over an IEasyScoreSource: logs failures and degrades them
 /// to empty data so pages render. Sits above the cache, so failed responses
@@ -176,13 +197,17 @@ type DegradingEasyScoreClient(source: IEasyScoreSource, logger: ILogger<Degradin
         }
 
     interface IEasyScoreClient with
-        member _.GetSchedule season = orEmpty "GetSchedule" [] (source.GetSchedule season)
+        member _.GetSchedule season =
+            orEmpty "GetSchedule" [] (source.GetSchedule season)
 
-        member _.GetStandings() = orEmpty "GetStandings" [] (source.GetStandings())
+        member _.GetStandings() =
+            orEmpty "GetStandings" [] (source.GetStandings())
 
-        member _.GetTeamStats() = orEmpty "GetTeamStats" [] (source.GetTeamStats())
+        member _.GetTeamStats() =
+            orEmpty "GetTeamStats" [] (source.GetTeamStats())
 
-        member _.GetPlayers() = orEmpty "GetPlayers" [] (source.GetPlayers())
+        member _.GetPlayers() =
+            orEmpty "GetPlayers" [] (source.GetPlayers())
 
         member this.GetPlayer id =
             // Lookup into the roster (cached one layer down).
@@ -199,8 +224,11 @@ type DegradingEasyScoreClient(source: IEasyScoreSource, logger: ILogger<Degradin
                   BattingLog = []
                   FieldingLog = []
                   PitchingLog = [] }
+
             orEmpty "GetPlayerStats" empty (source.GetPlayerStats logger id)
 
-        member _.GetBoxScore id = orEmpty "GetBoxScore" None (source.GetBoxScore id)
+        member _.GetBoxScore id =
+            orEmpty "GetBoxScore" None (source.GetBoxScore id)
 
-        member _.GetLiveGame() = orEmpty "GetLiveGame" None (source.GetLiveGame())
+        member _.GetLiveGame() =
+            orEmpty "GetLiveGame" None (source.GetLiveGame())

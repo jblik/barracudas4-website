@@ -1,5 +1,6 @@
 module Barracudas.Web.EasyScore.Dto
 
+open System.Text.Json
 open System.Text.Json.Serialization
 
 /// Raw JSON shapes from api.easyscore.com/v2, exactly as served.
@@ -191,10 +192,13 @@ type PitchingLogDto =
 /// One side of a linescore entry (GET /games?id=…). `line` is keyed by inning
 /// number; values are ints, or the string "x" when the side didn't bat.
 type LineScoreSideDto =
-    { abbr: string
-      team: string
+    {
+      [<JsonPropertyName "abbr">]
+      TeamAbbreviation: string
+      [<JsonPropertyName "team">]
+      TeamName: string
       logo: string option
-      line: Map<string, System.Text.Json.JsonElement>
+      line: Map<string, JsonElement>
       totals: LineScoreTotalsDto }
 
 and LineScoreTotalsDto = { R: int; H: int; E: int }
@@ -254,8 +258,10 @@ type BoxNoteDto = { T: string option; B: string option }
 
 /// The box score payload (GET /stats?box={gameId} → [{ BoxScores }]).
 type BoxScoresDto =
-    { AwayTeam: string
-      HomeTeam: string
+    { AwayTeam: int
+      HomeTeam: int
+      AwayTeamName: string
+      HomeTeamName: string
       AwayTeamAbbr: string
       HomeTeamAbbr: string
       AwayTeamLogo: string option

@@ -80,13 +80,6 @@ type private StatCol =
       Full: string
       Value: Player -> string option }
 
-/// Display heading for a stat category (the popup groups columns under these).
-let private categoryLabel =
-    function
-    | Offense -> "Batting"
-    | Fielding -> "Fielding"
-    | Pitching -> "Pitching"
-
 let private bat key label full (v: BattingStats -> string) : StatCol =
     { Key = "b_" + key
       Category = Offense
@@ -228,9 +221,9 @@ let private queryStr (cols: string list) (sort: string option) (dir: string) =
 
 /// HTMX attributes for a state-changing link: fetch the swappable panel, while
 /// pushing the equivalent page URL so the selection survives refresh and sharing.
-let private hxLink (cols: string list) (sort: string option) (dir: string) (menu: bool) =
+let private hxLink (cols: string list) (sort: string option) (dir: string)=
     let q = queryStr cols sort dir
-    [ _hxGet ("/players/partial" + q + (if menu then "&menu=open" else ""))
+    [ _hxGet ("/players/partial" + q)
       _hxPushUrl ("/players" + q)
       _hxTarget "#players-panel"
       _hxSwap "outerHTML" ]
@@ -245,7 +238,7 @@ let private header (cols: string list) (active: string option) (desc: bool) (col
 
     let attrs =
         _class (col.HeaderClass + " cursor-pointer select-none hover:underline")
-        :: hxLink cols (Some col.Key) nextDir false
+        :: hxLink cols (Some col.Key) nextDir
 
     th (if col.Full <> "" then attrs @ [ _title col.Full ] else attrs) [ str (col.Label + arrow) ]
 
@@ -275,7 +268,7 @@ let private columnToggle (cols: string list) (sort: string option) (desc: bool) 
             "cursor-help rounded-md bg-card px-2 py-1 text-xs font-semibold text-ink-strong ring-1 ring-card-ring transition-colors hover:ring-barracuda-accent/70"
 
     a
-        ([ _class cls; _title sc.Full ] @ hxLink next sort (if desc then "desc" else "asc") true)
+        ([ _class cls; _title sc.Full ] @ hxLink next sort (if desc then "desc" else "asc"))
         [ str sc.Label ]
 
 /// The "Columns" button + dropdown panel, grouped batting / fielding / pitching.
@@ -303,7 +296,7 @@ let private columnsMenu (cols: string list) (sort: string option) (desc: bool) (
                         h3
                             [ _class
                                   "mt-3 mb-1.5 text-xs font-black uppercase tracking-wider text-accent-text first:mt-0" ]
-                            [ str (categoryLabel cat) ]
+                            [ str (StatCategory.toString cat) ]
 
                     yield div [ _class "flex flex-wrap gap-1.5" ] (group cat) ] ]
 

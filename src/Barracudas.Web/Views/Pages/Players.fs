@@ -165,24 +165,24 @@ let private battingTable (s: BattingStats) =
     statTable
         "Batting"
         [ "G", "Games", string s.Games
-          "PA", "Plate Appearances", s.PA
-          "AB", "At Bats", s.AB
-          "R", "Runs", s.R
-          "H", "Hits", s.H
+          "PA", "Plate Appearances", s.PlateAppearances
+          "AB", "At Bats", s.AtBats
+          "R", "Runs", s.Runs
+          "H", "Hits", s.Hits
           "2B", "Doubles", s.Doubles
           "3B", "Triples", s.Triples
-          "HR", "Home Runs", s.HR
-          "RBI", "Runs Batted In", s.RBI
-          "TB", "Total Bases", s.TB
-          "BB", "Walks (Base on Balls)", s.BB
-          "SO", "Strikeouts", s.SO
-          "HBP", "Hit by Pitch", s.HBP
-          "SB", "Stolen Bases", s.SB
-          "CS", "Caught Stealing", s.CS
-          "AVG", "Batting Average", s.AVG
-          "OBP", "On-Base Percentage", s.OBP
-          "SLG", "Slugging Percentage", s.SLG
-          "OPS", "On-Base Plus Slugging", s.OPS ]
+          "HR", "Home Runs", s.HomeRuns
+          "RBI", "Runs Batted In", s.RunsBattedIn
+          "TB", "Total Bases", s.TotalBases
+          "BB", "Walks (Base on Balls)", s.BaseOnBalls
+          "SO", "Strikeouts", s.Strikeouts
+          "HBP", "Hit by Pitch", s.HitByPitch
+          "SB", "Stolen Bases", s.StolenBases
+          "CS", "Caught Stealing", s.CaughtStealing
+          "AVG", "Batting Average", s.BattingAverage
+          "OBP", "On-Base Percentage", s.OnBasePercentage
+          "SLG", "Slugging Percentage", s.Slugging
+          "OPS", "On-Base Plus Slugging", s.OnBasePlusSlugging ]
 
 let private fieldingTable (s: FieldingStats) =
     statTable
@@ -205,20 +205,20 @@ let private pitchingTable (s: PitchingStats) =
         "Pitching"
         [ "G", "Games", s.Games
           "GS", "Games Started", s.Starts
-          "IP", "Innings Pitched", s.IP
-          "H", "Hits Allowed", s.H
-          "R", "Runs Allowed", s.R
-          "ER", "Earned Runs", s.ER
-          "BB", "Walks (Base on Balls)", s.BB
-          "SO", "Strikeouts", s.SO
-          "HBP", "Hit Batters", s.HBP
+          "IP", "Innings Pitched", s.InningsPitched
+          "H", "Hits Allowed", s.HitsAllowed
+          "R", "Runs Allowed", s.RunsAllowed
+          "ER", "Earned Runs", s.EarnedRuns
+          "BB", "Walks (Base on Balls)", s.BaseOnBalls
+          "SO", "Strikeouts", s.Strikeouts
+          "HBP", "Hit Batters", s.HitBatters
           "WP", "Wild Pitches", s.WildPitches
           "W–L", "Win–Loss Record", s.Record
           "SV", "Saves", s.Saves
           "BF", "Batters Faced", s.BattersFaced
-          "OPP AVG", "Opponent Batting Average", s.OppAVG
-          "WHIP", "Walks and Hits per Inning Pitched", s.WHIP
-          "ERA", "Earned Run Average", s.ERA ]
+          "OPP AVG", "Opponent Batting Average", s.OpponentBattingAverage
+          "WHIP", "Walks and Hits per Inning Pitched", s.WalksHitsPerInningPitched
+          "ERA", "Earned Run Average", s.EarnedRunAverage ]
 
 /// A titled per-game log table in the same style as statTable; each column is
 /// (abbreviation, full stat name, cell value) — the full name shows as a hover
@@ -259,26 +259,26 @@ let private battingLogTable (rows: BattingLogEntry list) =
         [ "Date", "Game Date", fun (e: BattingLogEntry) -> e.Date.ToString(dateformat)
           "Opponent", "Opponent", _.Opponent
           "Spot", "Batting Order Spot", _.Spot
-          "Pos", "Positions Played", _.Pos
-          "AB", "At Bats", _.AB
-          "R", "Runs", _.R
-          "H", "Hits", _.H
+          "Pos", "Positions Played", _.PositionsPlayed
+          "AB", "At Bats", _.AtBats
+          "R", "Runs", _.Runs
+          "H", "Hits", _.Hits
           "2B", "Doubles", _.Doubles
           "3B", "Triples", _.Triples
-          "HR", "Home Runs", _.HR
-          "RBI", "Runs Batted In", _.RBI
-          "BB", "Walks (Base on Balls)", _.BB
-          "SO", "Strikeouts", _.SO
-          "SB", "Stolen Bases", _.SB
-          "CS", "Caught Stealing", _.CS
-          "HBP", "Hit by Pitch", _.HBP
-          "S", "Sacrifice Bunts", _.Sac
-          "SF", "Sacrifice Flies", _.SacFlies
-          "GIDP", "Grounded into Double Plays", _.GIDP
+          "HR", "Home Runs", _.HomeRuns
+          "RBI", "Runs Batted In", _.RunsBattedIn
+          "BB", "Walks (Base on Balls)", _.BaseOnBalls
+          "SO", "Strikeouts", _.StrikeOuts
+          "SB", "Stolen Bases", _.StolenBases
+          "CS", "Caught Stealing", _.CaughtStealing
+          "HBP", "Hit by Pitch", _.HitByPitches
+          "S", "Sacrifice Bunts", _.SacrificeBunts
+          "SF", "Sacrifice Flies", _.SacrificeFlies
+          "GIDP", "Grounded into Double Plays", _.GroundedIntoDoublePlay
           "2-out RBI", "Two-Out Runs Batted In", _.TwoOutRBI
-          "RISP", "Hits with Runners in Scoring Position", _.RISP
+          "RISP", "Hits with Runners in Scoring Position", _.RunnersInScoringPosition
           "GSc", "Formula:\n59 + Hits + Runs + .25*Walks + .25*HitByPitch + TotalBases + .25*StolenBases - .25*CaughtStealing + .25*SacFlies + .25*SacHits + RBIs - .25*Strikeouts - .25*Outs", _.GameScore
-          "AVG*", "Batting Average (season to date)", _.AvgToDate ]
+          "AVG*", "Batting Average (season to date)", _.BattingAverageSeasonToDate ]
         rows
 
 let private fieldingLogTable (rows: FieldingLogEntry list) =
@@ -305,13 +305,13 @@ let private pitchingLogTable (rows: PitchingLogEntry list) =
         "Pitching Game Log"
         [ "Date", "Game Date", fun (e: PitchingLogEntry) -> e.Date.ToString dateformat
           "Opponent", "Opponent", _.Opponent
-          "IP", "Innings Pitched", _.IP
-          "H", "Hits Allowed", _.H
-          "R", "Runs Allowed", _.R
-          "ER", "Earned Runs", _.ER
-          "BB", "Walks (Base on Balls)", _.BB
-          "SO", "Strikeouts", _.SO
-          "HBP", "Hit Batters", _.HBP
+          "IP", "Innings Pitched", _.InningsPitched
+          "H", "Hits Allowed", _.HitsAllowed
+          "R", "Runs Allowed", _.RunsAllowed
+          "ER", "Earned Runs", _.EarnedRuns
+          "BB", "Walks (Base on Balls)", _.BaseOnBalls
+          "SO", "Strikeouts", _.Strikeouts
+          "HBP", "Hit Batters", _.HitBatters
           "WP", "Wild Pitches", _.WildPitches
           "BK", "Balks", _.Balks
           "GB", "Ground Balls", _.GroundBalls

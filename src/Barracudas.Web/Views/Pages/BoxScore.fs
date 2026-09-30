@@ -27,7 +27,7 @@ let private runsOf (bs: BoxScore) (team: BoxTeam) (isAway: bool) =
     | None ->
         team.Batters
         |> List.tryFind (fun b -> b.Order.IsNone)
-        |> Option.map _.R
+        |> Option.map _.Runs
         |> Option.defaultValue 0
 
 // --- Scoreboard header --------------------------------------------------------
@@ -148,13 +148,13 @@ let private battingTable (t: BoxTeam) =
             tr
                 [ _class "border-t-2 border-barracuda-accent/40 font-black text-ink-strong" ]
                 [ td [ _class "px-2.5 py-2 text-left" ] [ str "Totals" ]
-                  td [ _class "px-2.5 py-2 text-center tabular-nums" ] [ str (string b.AB) ]
-                  td [ _class "px-2.5 py-2 text-center tabular-nums" ] [ str (string b.R) ]
-                  td [ _class "px-2.5 py-2 text-center tabular-nums" ] [ str (string b.H) ]
-                  td [ _class "px-2.5 py-2 text-center tabular-nums" ] [ str (string b.RBI) ]
-                  td [ _class "px-2.5 py-2 text-center tabular-nums" ] [ str (string b.BB) ]
-                  td [ _class "px-2.5 py-2 text-center tabular-nums" ] [ str (string b.SO) ]
-                  td [ _class "px-2.5 py-2 text-center tabular-nums" ] [ str (string b.LOB) ]
+                  td [ _class "px-2.5 py-2 text-center tabular-nums" ] [ str (string b.AtBats) ]
+                  td [ _class "px-2.5 py-2 text-center tabular-nums" ] [ str (string b.Runs) ]
+                  td [ _class "px-2.5 py-2 text-center tabular-nums" ] [ str (string b.Hits) ]
+                  td [ _class "px-2.5 py-2 text-center tabular-nums" ] [ str (string b.RunsBattedIn) ]
+                  td [ _class "px-2.5 py-2 text-center tabular-nums" ] [ str (string b.BaseOnBalls) ]
+                  td [ _class "px-2.5 py-2 text-center tabular-nums" ] [ str (string b.Strikeouts) ]
+                  td [ _class "px-2.5 py-2 text-center tabular-nums" ] [ str (string b.LeftOnBase) ]
                   td [ _class "px-2.5 py-2 text-center" ] [ str "" ] ]
         | Some spot ->
             tr
@@ -167,14 +167,14 @@ let private battingTable (t: BoxTeam) =
                                   [ _class "w-4 text-right text-xs tabular-nums text-ink-muted" ]
                                   [ str (if b.IsSub then "" else string spot) ]
                               span [ _class (if b.IsSub then "pl-3" else "") ] [ nameCell b ]
-                              span [ _class "text-xs font-medium text-ink-muted" ] [ str b.Pos ] ] ]
-                  num b.AB
-                  num b.R
-                  num b.H
-                  num b.RBI
-                  num b.BB
-                  num b.SO
-                  num b.LOB
+                              span [ _class "text-xs font-medium text-ink-muted" ] [ str b.Position ] ] ]
+                  num b.AtBats
+                  num b.Runs
+                  num b.Hits
+                  num b.RunsBattedIn
+                  num b.BaseOnBalls
+                  num b.Strikeouts
+                  num b.LeftOnBase
                   td [ _class "px-2.5 py-2 text-center tabular-nums text-ink-muted" ] [ str (avgText b.Avg) ] ]
 
     div
@@ -216,18 +216,18 @@ let private pitchingTable (t: BoxTeam) =
         tr
             [ _class rowCls ]
             [ td [ _class nameCls ] [ str p.Name ]
-              num p.IP
-              num (string p.H)
-              num (string p.R)
-              num (string p.ER)
-              num (string p.BB)
-              num (string p.SO)
-              num (string p.HR)
+              num p.InningsPitched
+              num (string p.Hits)
+              num (string p.RunsAllowed)
+              num (string p.EarnedRuns)
+              num (string p.BaseOnBalls)
+              num (string p.Strikeouts)
+              num (string p.HomeRunsAllowed)
               num (string p.BattersFaced)
               num (sprintf "%d (%d)" p.Pitches p.Strikes)
               td
                   [ _class "px-2.5 py-2 text-center tabular-nums text-ink-muted" ]
-                  [ str (if p.IsTotals then "" else p.ERA) ] ]
+                  [ str (if p.IsTotals then "" else p.EarnedRunAverage) ] ]
 
     div
         [ _class "overflow-x-auto rounded-lg bg-card ring-1 ring-card-ring" ]

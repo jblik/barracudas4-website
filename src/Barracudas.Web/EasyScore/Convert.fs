@@ -149,12 +149,20 @@ let toRoster (activeRoster: int list) (dtos: PlayerDto list) (offense: OffenseSt
             |> List.sortBy (fun p -> p.LastName.ToUpperInvariant(), p.FirstName.ToUpperInvariant())
     }
 
-/// A player's season stat lines, picked out of the round-wide stat lists.
+/// Log dates carry no reliable time component; only the date matters.
+let private logDate (s: string) =
+    parseDateTime s |> Option.map _.Date |> Option.defaultValue DateTime.MinValue
+
+/// A player's season stat lines, picked out of the round-wide stat lists,
+/// plus the per-game logs (already filtered to the player by the API).
 let toPlayerStats
     (playerId: int)
     (offense: OffenseStatsDto list)
     (fielding: FieldingStatsDto list)
     (pitching: PitchingStatsDto list)
+    (battingLog: BattingLogDto list)
+    (fieldingLog: FieldingLogDto list)
+    (pitchingLog: PitchingLogDto list)
     : Async<Result<PlayerStats, EasyScoreError>> =
     asyncResult {
         let batting =
@@ -216,7 +224,76 @@ let toPlayerStats
                   OppAVG = s.OppAVG
                   WHIP = s.WHIP
                   ERA = s.ERA })
-        return { Batting = batting; Fielding = field; Pitching = pitch }
+        let batLog =
+            [ for e in battingLog ->
+                { Date = logDate e.Date
+                  Opponent = e.Opponent
+                  Spot = e.Spot
+                  Pos = e.Pos
+                  AB = e.AB
+                  R = e.R
+                  H = e.H
+                  Doubles = e.Doubles
+                  Triples = e.Triples
+                  HR = e.HR
+                  RBI = e.RBI
+                  BB = e.BB
+                  SO = e.SO
+                  SB = e.SB
+                  CS = e.CS
+                  HBP = e.HBP
+                  Sac = e.S
+                  SacFlies = e.SF
+                  GIDP = e.GIDP
+                  TwoOutRBI = e.TwoOutRBI
+                  RISP = e.RISP
+                  GameScore = e.Gsc
+                  AvgToDate = e.BA } ]
+        let fldLog =
+            [ for e in fieldingLog ->
+                { Date = logDate e.Date
+                  Opponent = e.Opponent
+                  Pos = e.Pos
+                  Innings = e.InningsPlayed
+                  Putouts = e.Putout
+                  Assists = e.Assist
+                  OutfieldAssists = e.OutfieldAssists
+                  Errors = e.Error
+                  DoublePlays = e.DP
+                  PassedBalls = e.PB
+                  StealAttempts = e.SBAtt
+                  CaughtStealing = e.CSMade
+                  RangeFactorToDate = e.RangeFactor
+                  FieldingPctToDate = e.FPct } ]
+        let pitLog =
+            [ for e in pitchingLog ->
+                { Date = logDate e.Date
+                  Opponent = e.Opponent
+                  IP = e.IP
+                  H = e.H
+                  R = e.R
+                  ER = e.ER
+                  BB = e.BB
+                  SO = e.K
+                  HBP = e.HBP
+                  WildPitches = e.WP
+                  Balks = e.BK
+                  GroundBalls = e.GB
+                  FlyBalls = e.FB
+                  BattersFaced = e.BF
+                  Pitches = e.Pitches
+                  Decision = e.Decision
+                  Relief = e.Relief
+                  GameScore = e.GSc
+                  WhipToDate = e.WHIP
+                  EraToDate = e.ERA } ]
+        return
+            { Batting = batting
+              Fielding = field
+              Pitching = pitch
+              BattingLog = batLog
+              FieldingLog = fldLog
+              PitchingLog = pitLog }
     }
 
 /// The in-progress game involving us, if any.

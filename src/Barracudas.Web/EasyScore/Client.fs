@@ -91,15 +91,18 @@ type EasyScoreApiClient(http: HttpClient, cfg: Config.AppConfig) =
 
     let playerStats (id: string) =
         asyncResult {
-            let! rd = roundId ()
-            let! offense = statsApi.Offense(cfg.Season, cfg.LeagueId, rd)
-            let! fielding = statsApi.Fielding(cfg.Season, cfg.LeagueId, rd)
-            let! pitching = statsApi.Pitching(cfg.Season, cfg.LeagueId, rd)
             let! playerId =
                 match System.Int32.TryParse id with
                 | true, v -> Ok v
                 | _ -> Error(ConvertError $"invalid player id '%s{id}'")
-            return! Convert.toPlayerStats playerId offense fielding pitching
+            let! rd = roundId ()
+            let! offense = statsApi.Offense(cfg.Season, cfg.LeagueId, rd)
+            let! fielding = statsApi.Fielding(cfg.Season, cfg.LeagueId, rd)
+            let! pitching = statsApi.Pitching(cfg.Season, cfg.LeagueId, rd)
+            let! battingLog = statsApi.OffenseLog(cfg.Season, cfg.LeagueId, rd, playerId)
+            let! fieldingLog = statsApi.FieldingLog(cfg.Season, cfg.LeagueId, rd, playerId)
+            let! pitchingLog = statsApi.PitchingLog(cfg.Season, cfg.LeagueId, rd, playerId)
+            return! Convert.toPlayerStats playerId offense fielding pitching battingLog fieldingLog pitchingLog
         }
 
     let toTask (work: Async<Result<'a, EasyScoreError>>) = Async.StartImmediateAsTask work
@@ -156,6 +159,13 @@ type DegradingEasyScoreClient(source: IEasyScoreSource, logger: ILogger<Degradin
             }
 
         member _.GetPlayerStats id =
-            orEmpty "GetPlayerStats" { Batting = None; Fielding = None; Pitching = None } (source.GetPlayerStats id)
+            let empty =
+                { Batting = None
+                  Fielding = None
+                  Pitching = None
+                  BattingLog = []
+                  FieldingLog = []
+                  PitchingLog = [] }
+            orEmpty "GetPlayerStats" empty (source.GetPlayerStats id)
 
         member _.GetLiveGame() = orEmpty "GetLiveGame" None (source.GetLiveGame())

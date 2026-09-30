@@ -106,6 +106,85 @@ type PitchingStatsDto =
       WHIP: string
       ERA: string }
 
+/// GET /stats?…&cat=off&subCategory=log&playerID={id} — one row per game,
+/// newest first. BA is the season average through that game.
+type BattingLogDto =
+    { GameID: int
+      Date: string
+      Opponent: string
+      Spot: string
+      Pos: string
+      AB: string
+      R: string
+      H: string
+      [<JsonPropertyName "2B">]
+      Doubles: string
+      [<JsonPropertyName "3B">]
+      Triples: string
+      HR: string
+      RBI: string
+      BB: string
+      SO: string
+      SB: string
+      CS: string
+      HBP: string
+      S: string
+      SF: string
+      GIDP: string
+      [<JsonPropertyName "2-out RBI">]
+      TwoOutRBI: string
+      RISP: string
+      Gsc: string
+      BA: string }
+
+/// GET /stats?…&cat=fld&subCategory=log&playerID={id} —
+/// RangeFactor/FPct are season values through that game.
+type FieldingLogDto =
+    { GameID: int
+      Date: string
+      Opponent: string
+      Pos: string
+      InningsPlayed: string
+      Putout: string
+      Assist: string
+      [<JsonPropertyName "Outfield Assists">]
+      OutfieldAssists: string
+      Error: string
+      DP: string
+      PB: string
+      SBAtt: string
+      CSMade: string
+      RangeFactor: string
+      FPct: string }
+
+/// GET /stats?…&cat=pit&subCategory=log&playerID={id} —
+/// WHIP/ERA are season values through that game.
+type PitchingLogDto =
+    { GameID: int
+      Date: string
+      Opponent: string
+      IP: string
+      H: string
+      R: string
+      ER: string
+      BB: string
+      K: string
+      HBP: string
+      WP: string
+      BK: string
+      GB: string
+      FB: string
+      BF: string
+      [<JsonPropertyName "#Pit">]
+      Pitches: string
+      [<JsonPropertyName "Dec.">]
+      Decision: string
+      [<JsonPropertyName "Rel.">]
+      Relief: string
+      GSc: string
+      WHIP: string
+      ERA: string }
+
 /// GET /players?uid={userId}
 type PlayerDto =
     { ID: int

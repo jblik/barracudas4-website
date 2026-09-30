@@ -44,28 +44,26 @@ type Standing =
 /// A single labelled team statistic (e.g. "Team AVG" -> ".287").
 type TeamStat = { Label: string; Value: string }
 
-type PlayerStat =
+/// Roster entry from the EasyScore licence registry (no per-player stats yet).
+type Player =
     { Id: string
-      Name: string
+      FirstName: string
+      LastName: string
+      /// Uniform number, when registered.
       Number: int option
-      Position: string
-      Games: int
-      AtBats: int
-      Runs: int
-      Hits: int
-      HomeRuns: int
-      Rbi: int
-      /// Batting average, 0.0–1.0.
-      Avg: float }
+      /// Batting side: "R", "L", "S" or "".
+      Bats: string
+      /// Throwing arm: "R", "L" or "".
+      Throws: string
+      /// ISO country code, e.g. "CH".
+      Nationality: string
+      Age: int option }
+    member p.Name = sprintf "%s %s" p.FirstName p.LastName
 
-/// In-progress game snapshot for the live banner.
+/// In-progress game for the live banner (rendered via the EasyScore
+/// linescore overlay, https://www.easyscore.com/overlays/linescores/{id}).
 type LiveGame =
-    { Opponent: string
-      IsHome: bool
-      OurScore: int
-      OpponentScore: int
-      /// Current inning number.
-      Inning: int
-      /// True = top of the inning, false = bottom.
-      IsTop: bool
-      Outs: int }
+    { /// EasyScore game id, e.g. "19313".
+      GameId: string
+      Opponent: string
+      IsHome: bool }

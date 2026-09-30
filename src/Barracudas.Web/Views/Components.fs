@@ -62,19 +62,24 @@ let gameRow (g: Game) =
         td [ _class "py-3" ] [ statusBadge g.Status ]
     ]
 
-/// The live scoreboard banner fragment returned by /live.
+/// The live scoreboard banner fragment returned by /live. The linescore itself
+/// is EasyScore's stream overlay for the game, embedded in an iframe.
 let liveBanner (lg: LiveGame) =
-    let half = if lg.IsTop then "Top" else "Bot"
     let matchup =
         if lg.IsHome then sprintf "Barracudas vs %s" lg.Opponent
         else sprintf "Barracudas @ %s" lg.Opponent
+    let overlayUrl = sprintf "https://www.easyscore.com/overlays/linescores/%s" lg.GameId
+    let gamecastUrl = sprintf "https://www.easyscore.com/live/gamecast/%s" lg.GameId
     div [ _class "bg-red-700 text-white" ] [
-        div [ _class "mx-auto flex max-w-5xl items-center gap-4 px-4 py-2 text-sm" ] [
-            span [ _class "rounded bg-white/20 px-2 py-0.5 text-xs font-bold tracking-wide animate-pulse" ] [ str "● LIVE" ]
-            span [ _class "font-semibold" ] [ str matchup ]
-            span [ _class "ml-auto font-mono text-lg font-bold" ] [
-                str (sprintf "%d – %d" lg.OurScore lg.OpponentScore)
+        div [ _class "mx-auto max-w-5xl px-4 py-2 text-sm" ] [
+            div [ _class "flex items-center gap-4" ] [
+                span [ _class "rounded bg-white/20 px-2 py-0.5 text-xs font-bold tracking-wide animate-pulse" ] [ str "● LIVE" ]
+                span [ _class "font-semibold" ] [ str matchup ]
+                a [ _href gamecastUrl; _target "_blank"; _rel "noopener"
+                    _class "ml-auto font-semibold underline decoration-white/50 hover:decoration-white" ] [ str "Gamecast ↗" ]
             ]
-            span [ _class "text-white/80" ] [ str (sprintf "%s %d · %d out" half lg.Inning lg.Outs) ]
+            iframe [ _src overlayUrl; _title "Live linescore"
+                     _class "mt-2 h-40 w-full rounded bg-black/20"
+                     attr "scrolling" "no"; attr "loading" "lazy" ] []
         ]
     ]

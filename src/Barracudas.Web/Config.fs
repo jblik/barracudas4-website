@@ -3,21 +3,23 @@ module Barracudas.Web.Config
 open Microsoft.Extensions.Configuration
 
 /// Application configuration, bound from IConfiguration (appsettings + env + user-secrets).
+/// ApiKey comes from the EasyScore__ApiKey environment variable in production
+/// (appsettings.Development.json in dev) — never from the committed appsettings.json.
 type AppConfig =
-    { /// EasyScore API base URL (e.g. https://api.easyscore.com).
+    { /// EasyScore API base URL (e.g. https://api.easyscore.com/v2).
       BaseUrl: string
-      /// EasyScore API key. Loaded from user-secrets / env — never committed.
+      /// EasyScore API key, sent as the x-api-key header.
       ApiKey: string
-      /// Public swiss-baseball.ch admin-ajax endpoint that serves league data.
-      SourceUrl: string
-      /// swiss-baseball.ch league index for 1. Liga Baseball Ost.
-      LeagueIndex: int
-      /// EasyScore team identifier for the Barracudas 1. Liga side.
-      TeamId: string
-      /// Our team's short code in the league feed (e.g. "BAR4").
-      TeamAbbr: string
-      /// League name/identifier.
-      League: string
+      /// EasyScore user id (uid) that scopes the /players endpoint.
+      RequestUserId: string
+      /// EasyScore league id for 1. Liga Baseball (2026 = 10143).
+      LeagueId: int
+      /// Substring that picks our round out of the league's rounds ("Ost").
+      RoundFilter: string
+      /// EasyScore team id for Zürich Barracudas 4 (13069).
+      TeamId: int
+      /// Exact team name used to filter the /players roster.
+      TeamName: string
       /// Current season (year).
       Season: int
       /// Live banner poll interval in seconds.
@@ -33,12 +35,12 @@ let load (cfg: IConfiguration) : AppConfig =
         match System.Int32.TryParse(section.[key]) with
         | true, v -> v
         | _ -> fallback
-    { BaseUrl = str "BaseUrl" "https://api.easyscore.com"
+    { BaseUrl = str "BaseUrl" "https://api.easyscore.com/v2"
       ApiKey = str "ApiKey" ""
-      SourceUrl = str "SourceUrl" "https://www.swiss-baseball.ch/wp-admin/admin-ajax.php"
-      LeagueIndex = intOr "LeagueIndex" 160
-      TeamId = str "TeamId" "barracudas4"
-      TeamAbbr = str "TeamAbbr" "BAR4"
-      League = str "League" "1. Liga Baseball Ost"
+      RequestUserId = str "RequestUserId" ""
+      LeagueId = intOr "LeagueId" 10143
+      RoundFilter = str "RoundFilter" "Ost"
+      TeamId = intOr "TeamId" 13069
+      TeamName = str "TeamName" "Zürich Barracudas 4"
       Season = intOr "Season" System.DateTime.Now.Year
       LivePollSeconds = intOr "LivePollSeconds" 25 }

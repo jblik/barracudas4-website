@@ -6,11 +6,11 @@ open System.Net.Http
 open Microsoft.AspNetCore.Builder
 open Microsoft.Extensions.DependencyInjection
 open Microsoft.Extensions.Caching.Memory
+open Microsoft.Extensions.Logging
 open Giraffe
 open Barracudas.Web
 open Barracudas.Web.EasyScore.Client
 open Barracudas.Web.EasyScore.Cache
-open Barracudas.Web.EasyScore.SwissBaseball
 
 [<EntryPoint>]
 let main args =
@@ -25,12 +25,15 @@ let main args =
     let aboutPath = Path.Combine(builder.Environment.ContentRootPath, "content", "about.json")
     builder.Services.AddSingleton<Content.AboutContent>(Content.loadAbout aboutPath) |> ignore
 
-    // Live data from the public swiss-baseball.ch league feed, behind the caching decorator.
+    // Live data from the EasyScore v2 API, behind the caching decorator.
+    // The API key arrives via configuration (EasyScore__ApiKey env var in prod).
     builder.Services.AddSingleton<IEasyScoreClient>(fun sp ->
         let cache = sp.GetRequiredService<IMemoryCache>()
         let http = sp.GetRequiredService<IHttpClientFactory>().CreateClient()
-        http.DefaultRequestHeaders.UserAgent.ParseAdd("Mozilla/5.0 (compatible; BarracudasWeb/1.0)")
-        let inner = SwissBaseballClient(http, cfg) :> IEasyScoreClient
+        http.BaseAddress <- Uri(cfg.BaseUrl.TrimEnd '/' + "/")
+        http.DefaultRequestHeaders.Add("x-api-key", cfg.ApiKey)
+        let logger = sp.GetRequiredService<ILogger<EasyScoreApiClient>>()
+        let inner = EasyScoreApiClient(http, cfg, logger) :> IEasyScoreClient
         CachingEasyScoreClient(inner, cache) :> IEasyScoreClient)
     |> ignore
 

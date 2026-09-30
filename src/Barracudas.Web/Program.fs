@@ -25,16 +25,18 @@ let main args =
     let aboutPath = Path.Combine(builder.Environment.ContentRootPath, "content", "about.json")
     builder.Services.AddSingleton<Content.AboutContent>(Content.loadAbout aboutPath) |> ignore
 
-    // Live data from the EasyScore v2 API, behind the caching decorator.
-    // The API key arrives via configuration (EasyScore__ApiKey env var in prod).
+    // Live data from the EasyScore v2 API: api → cache (Ok results only) →
+    // error degradation. The API key arrives via configuration
+    // (EasyScore__ApiKey env var in prod).
     builder.Services.AddSingleton<IEasyScoreClient>(fun sp ->
         let cache = sp.GetRequiredService<IMemoryCache>()
         let http = sp.GetRequiredService<IHttpClientFactory>().CreateClient()
         http.BaseAddress <- Uri(cfg.BaseUrl.TrimEnd '/' + "/")
         http.DefaultRequestHeaders.Add("x-api-key", cfg.ApiKey)
-        let logger = sp.GetRequiredService<ILogger<EasyScoreApiClient>>()
-        let inner = EasyScoreApiClient(http, cfg, logger) :> IEasyScoreClient
-        CachingEasyScoreClient(inner, cfg, cache) :> IEasyScoreClient)
+        let api = EasyScoreApiClient(http, cfg) :> IEasyScoreSource
+        let cached = CachingEasyScoreSource(api, cfg, cache) :> IEasyScoreSource
+        let logger = sp.GetRequiredService<ILogger<DegradingEasyScoreClient>>()
+        DegradingEasyScoreClient(cached, logger) :> IEasyScoreClient)
     |> ignore
 
     let app = builder.Build()

@@ -5,13 +5,15 @@ open System.Threading.Tasks
 open Microsoft.Extensions.Caching.Memory
 open Barracudas.Web
 open Barracudas.Web.Domain
+open Barracudas.Web.EasyScore.Api
 open Barracudas.Web.EasyScore.Client
 
 /// All EasyScore caching lives in this module: one decorator over
-/// IEasyScoreClient, one TTL policy (Policy below). EasyScore data only
-/// changes on game days, so everything is cached until the next one; on a
-/// game day itself only the live banner keeps polling the API, and player
-/// data drops to a short TTL while a game is underway.
+/// IEasyScoreSource, one TTL policy (Policy below). Only successful fetches
+/// are cached — errors pass through to the degrading client untouched.
+/// EasyScore data only changes on game days, so everything is cached until
+/// the next one; on a game day itself only the live banner keeps polling the
+/// API, and player data drops to a short TTL while a game is underway.
 
 /// Wrapper around cached values: a bare F# None boxes to null, which
 /// IMemoryCache.TryGetValue cannot distinguish from a cache miss.
@@ -34,8 +36,9 @@ type Freshness =
 /// The cache TTL rules, all in one place. Each rule derives its expiry from
 /// our schedule (the source of game days) and the current Swiss time.
 module Policy =
-    /// Failed fetches degrade to empty data — retry those soon.
-    let errorTtl = TimeSpan.FromMinutes 5.0
+    /// Used when the schedule itself is unavailable, so no game-day expiry
+    /// can be computed for an otherwise successful fetch.
+    let fallbackTtl = TimeSpan.FromMinutes 5.0
     /// Live banner refresh on a game day (pages poll /live every ~25 s).
     let liveTtl = TimeSpan.FromSeconds 12.0
     /// Player data while a game is underway.
@@ -84,22 +87,28 @@ module Policy =
             | Some day -> Until day
             | None -> For offSeasonTtl
 
-/// Caching decorator over an inner IEasyScoreClient. Keeps EasyScore request
+/// Caching decorator over an inner IEasyScoreSource. Keeps EasyScore request
 /// volume low (at most a handful of fetches per day outside game days)
-/// without changing callers.
-type CachingEasyScoreClient(inner: IEasyScoreClient, cfg: Config.AppConfig, cache: IMemoryCache) =
-    let getOrAdd (key: string) (freshness: 'a -> Freshness) (factory: unit -> Task<'a>) : Task<'a> =
+/// without changing callers. Failed fetches are never cached.
+type CachingEasyScoreSource(inner: IEasyScoreSource, cfg: Config.AppConfig, cache: IMemoryCache) =
+    let getOrAdd
+        (key: string)
+        (freshness: 'a -> Freshness)
+        (factory: unit -> Task<Result<'a, EasyScoreError>>)
+        : Task<Result<'a, EasyScoreError>> =
         match cache.TryGetValue key with
-        | true, (:? CacheEntry<'a> as e) -> Task.FromResult e.Value
+        | true, (:? CacheEntry<'a> as e) -> Task.FromResult(Ok e.Value)
         | _ ->
             task {
-                let! value = factory ()
-                let ttl =
-                    match freshness value with
-                    | For t -> t
-                    | Until instant -> max (instant - Swiss.now ()) (TimeSpan.FromSeconds 30.0)
-                cache.Set(key, { Value = value }, ttl) |> ignore
-                return value
+                match! factory () with
+                | Error e -> return Error e
+                | Ok value ->
+                    let ttl =
+                        match freshness value with
+                        | For t -> t
+                        | Until instant -> max (instant - Swiss.now ()) (TimeSpan.FromSeconds 30.0)
+                    cache.Set(key, { Value = value }, ttl) |> ignore
+                    return Ok value
             }
 
     /// Our schedule is both cached content and the source of game days for
@@ -107,53 +116,34 @@ type CachingEasyScoreClient(inner: IEasyScoreClient, cfg: Config.AppConfig, cach
     let schedule (season: int) =
         getOrAdd
             $"schedule:%d{season}"
-            (fun games ->
-                if List.isEmpty games then For Policy.errorTtl
-                else Policy.content games (Swiss.now ()))
+            (fun games -> Policy.content games (Swiss.now ()))
             (fun () -> inner.GetSchedule season)
 
-    /// Cache `key` under `policy`. `degraded` flags values that came from a
-    /// failed fetch (the inner client degrades errors to empty data); those
-    /// get the short error TTL instead of sticking around until game day.
-    let policied (key: string) (policy: Game list -> DateTime -> Freshness) (degraded: 'a -> bool) (factory: unit -> Task<'a>) : Task<'a> =
+    /// Cache `key` under `policy`, deriving game days from the schedule.
+    let policied
+        (key: string)
+        (policy: Game list -> DateTime -> Freshness)
+        (factory: unit -> Task<Result<'a, EasyScoreError>>)
+        : Task<Result<'a, EasyScoreError>> =
         task {
-            let! games = schedule cfg.Season
-            return!
-                getOrAdd
-                    key
-                    (fun value ->
-                        if degraded value || List.isEmpty games then For Policy.errorTtl
-                        else policy games (Swiss.now ()))
-                    factory
+            let! sched = schedule cfg.Season
+            let freshness =
+                match sched with
+                | Ok games -> fun _ -> policy games (Swiss.now ())
+                | Error _ -> fun _ -> For Policy.fallbackTtl
+            return! getOrAdd key freshness factory
         }
 
-    let players () = policied "players" Policy.players List.isEmpty inner.GetPlayers
-
-    interface IEasyScoreClient with
+    interface IEasyScoreSource with
         member _.GetSchedule season = schedule season
 
-        member _.GetStandings() =
-            policied "standings" Policy.content List.isEmpty inner.GetStandings
+        member _.GetStandings() = policied "standings" Policy.content inner.GetStandings
 
-        member _.GetTeamStats() =
-            policied "teamstats" Policy.content List.isEmpty inner.GetTeamStats
+        member _.GetTeamStats() = policied "teamstats" Policy.content inner.GetTeamStats
 
-        member _.GetPlayers() = players ()
-
-        member _.GetPlayer id =
-            // Lookup into the cached roster instead of a per-player fetch.
-            task {
-                let! ps = players ()
-                return ps |> List.tryFind (fun p -> p.Id = id)
-            }
+        member _.GetPlayers() = policied "players" Policy.players inner.GetPlayers
 
         member _.GetPlayerStats id =
-            policied
-                $"playerstats:%s{id}"
-                Policy.players
-                (fun (s: PlayerStats) -> s.Batting.IsNone && s.Fielding.IsNone && s.Pitching.IsNone)
-                (fun () -> inner.GetPlayerStats id)
+            policied $"playerstats:%s{id}" Policy.players (fun () -> inner.GetPlayerStats id)
 
-        member _.GetLiveGame() =
-            // None is the normal pre-game answer, not a degraded value.
-            policied "live" Policy.live (fun _ -> false) inner.GetLiveGame
+        member _.GetLiveGame() = policied "live" Policy.live inner.GetLiveGame

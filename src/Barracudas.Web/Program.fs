@@ -34,7 +34,7 @@ let main args =
         http.DefaultRequestHeaders.Add("x-api-key", cfg.ApiKey)
         let logger = sp.GetRequiredService<ILogger<EasyScoreApiClient>>()
         let inner = EasyScoreApiClient(http, cfg, logger) :> IEasyScoreClient
-        CachingEasyScoreClient(inner, cache) :> IEasyScoreClient)
+        CachingEasyScoreClient(inner, cfg, cache) :> IEasyScoreClient)
     |> ignore
 
     let app = builder.Build()

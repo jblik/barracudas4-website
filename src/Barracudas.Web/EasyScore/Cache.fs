@@ -141,7 +141,8 @@ type CachingEasyScoreSource(inner: IEasyScoreSource, cfg: Config.AppConfig, cach
 
         member _.GetTeamStats() = policied "teamstats" Policy.content inner.GetTeamStats
 
-        member _.GetPlayers() = policied "players" Policy.players inner.GetPlayers
+        member _.GetPlayers logger =
+            policied "players" Policy.players (fun () -> inner.GetPlayers logger)
 
         member _.GetPlayerStats logger id =
             policied $"playerstats:%s{id}" Policy.players (fun () -> inner.GetPlayerStats logger id)

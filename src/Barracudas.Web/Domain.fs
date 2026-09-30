@@ -49,23 +49,6 @@ type Standing =
 /// A single labelled team statistic (e.g. "Team AVG" -> ".287").
 type TeamStat = { Label: string; Value: string }
 
-/// Roster entry from the EasyScore licence registry.
-type Player =
-    { Id: string
-      FirstName: string
-      LastName: string
-      /// Uniform number, when registered.
-      Number: int option
-      /// Batting side: "R", "L", "S" or "".
-      Bats: string
-      /// Throwing arm: "R", "L" or "".
-      Throws: string
-      /// Season batting average, pre-formatted (".294"); None without at-bats.
-      BattingAvg: string option }
-    member p.Name = sprintf "%s %s" p.FirstName p.LastName
-    /// Roster-list form: "LASTNAME, First Name".
-    member p.ListName = sprintf "%s, %s" (p.LastName.ToUpperInvariant()) p.FirstName
-
 /// Season batting line (values pre-formatted by EasyScore).
 type BattingStats =
     { Games: int
@@ -121,6 +104,29 @@ type PitchingStats =
       OpponentBattingAverage: string
       WalksHitsPerInningPitched: string
       EarnedRunAverage: string }
+
+/// Roster entry from the EasyScore licence registry.
+type Player =
+    { Id: string
+      FirstName: string
+      LastName: string
+      /// Uniform number, when registered.
+      Number: int option
+      /// Batting side: "R", "L", "S" or "".
+      Bats: string
+      /// Throwing arm: "R", "L" or "".
+      Throws: string
+      /// Season batting average, pre-formatted (".294"); None without at-bats.
+      BattingAvg: string option
+      /// Season batting line, when the player has at-bats (drives roster columns).
+      Batting: BattingStats option
+      /// Season fielding line, when the player has fielding appearances.
+      Fielding: FieldingStats option
+      /// Season pitching line, when the player has pitched.
+      Pitching: PitchingStats option }
+    member p.Name = sprintf "%s %s" p.FirstName p.LastName
+    /// Roster-list form: "LASTNAME, First Name".
+    member p.ListName = sprintf "%s, %s" (p.LastName.ToUpperInvariant()) p.FirstName
 
 /// One game's batting line from the player's game log (newest first).
 type BattingLogEntry =

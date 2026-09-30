@@ -41,7 +41,7 @@ let schedulePartial : HttpHandler =
         task {
             let tab = match ctx.TryGetQueryStringValue "tab" with Some t -> t | None -> "upcoming"
             let! games = (client ctx).GetSchedule (cfg ctx).Season
-            return! htmlView (Pages.Schedule.table (filterGames tab games)) next ctx
+            return! htmlView (Pages.Schedule.content tab (filterGames tab games)) next ctx
         }
 
 let standings : HttpHandler =
@@ -64,7 +64,9 @@ let player (id: string) : HttpHandler =
         task {
             let! p = (client ctx).GetPlayer id
             match p with
-            | Some pl -> return! renderPage "players" pl.Name ctx (Pages.Players.detailView pl) next ctx
+            | Some pl ->
+                let! stats = (client ctx).GetPlayerStats id
+                return! renderPage "players" pl.Name ctx (Pages.Players.detailView pl stats) next ctx
             | None -> return! (setStatusCode 404 >=> text "Player not found") next ctx
         }
 
@@ -83,7 +85,7 @@ let live : HttpHandler =
             | Some g, _ -> return! htmlView (Components.liveBanner g) next ctx
             | None, true ->
                 // Real completed game so the overlay iframe has data to show.
-                let demo = { GameId = "19313"; Opponent = "Demo Opponent"; IsHome = true }
+                let demo = { GameId = "19313"; AwayName = "Demo Opponent"; HomeName = "Zürich Barracudas 4" }
                 return! htmlView (Components.liveBanner demo) next ctx
             | None, false -> return! htmlString "" next ctx
         }

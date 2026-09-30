@@ -34,5 +34,7 @@ type CachingEasyScoreClient(inner: IEasyScoreClient, cache: IMemoryCache) =
             getOrAdd "players" contentTtl inner.GetPlayers
         member _.GetPlayer(id) =
             getOrAdd (sprintf "player:%s" id) contentTtl (fun () -> inner.GetPlayer id)
+        member _.GetPlayerStats(id) =
+            getOrAdd (sprintf "playerstats:%s" id) contentTtl (fun () -> inner.GetPlayerStats id)
         member _.GetLiveGame() =
             getOrAdd "live" liveTtl inner.GetLiveGame

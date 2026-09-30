@@ -20,6 +20,8 @@ type IEasyScoreClient =
     abstract member GetPlayers: unit -> Task<Player list>
     /// A single roster player by id.
     abstract member GetPlayer: id: string -> Task<Player option>
+    /// Season batting/fielding/pitching lines of a player.
+    abstract member GetPlayerStats: id: string -> Task<PlayerStats>
     /// Current in-progress game, if any.
     abstract member GetLiveGame: unit -> Task<LiveGame option>
 
@@ -31,6 +33,7 @@ type EasyScoreApiClient(http: HttpClient, cfg: Config.AppConfig, logger: ILogger
     let teamsApi = TeamsApi http
     let scheduleApi = ScheduleApi http
     let playersApi = PlayersApi http
+    let statsApi = StatsApi http
 
     /// Our round id (1. Liga Ost), resolved from the league's rounds.
     let roundId () =
@@ -61,10 +64,31 @@ type EasyScoreApiClient(http: HttpClient, cfg: Config.AppConfig, logger: ILogger
             return! Convert.toStandings cfg.TeamId teams games
         }
 
+    /// Round-wide offensive stats (one row per player with plate appearances).
+    let offenseStats () =
+        asyncResult {
+            let! rd = roundId ()
+            return! statsApi.Offense(cfg.Season, cfg.LeagueId, rd)
+        }
+
     let roster () =
         asyncResult {
             let! players = playersApi.ByUser cfg.RequestUserId
-            return! Convert.toRoster cfg.TeamName players
+            let! offense = offenseStats ()
+            return! Convert.toRoster cfg.TeamName players offense
+        }
+
+    let playerStats (id: string) =
+        asyncResult {
+            let! rd = roundId ()
+            let! offense = statsApi.Offense(cfg.Season, cfg.LeagueId, rd)
+            let! fielding = statsApi.Fielding(cfg.Season, cfg.LeagueId, rd)
+            let! pitching = statsApi.Pitching(cfg.Season, cfg.LeagueId, rd)
+            let! playerId =
+                match System.Int32.TryParse id with
+                | true, v -> Ok v
+                | _ -> Error(ConvertError(sprintf "invalid player id '%s'" id))
+            return! Convert.toPlayerStats playerId offense fielding pitching
         }
 
     /// Run a pipeline; on error, log it and fall back to empty data.
@@ -96,6 +120,9 @@ type EasyScoreApiClient(http: HttpClient, cfg: Config.AppConfig, logger: ILogger
                 let! players = roster ()
                 return players |> List.tryFind (fun p -> p.Id = id)
             })
+
+        member _.GetPlayerStats id =
+            run "GetPlayerStats" { Batting = None; Fielding = None; Pitching = None } (playerStats id)
 
         member _.GetLiveGame() =
             run "GetLiveGame" None (asyncResult {

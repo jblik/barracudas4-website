@@ -35,13 +35,29 @@ let private statusBadge (status: GameStatus) =
     span [ _class (sprintf "rounded px-2 py-0.5 text-xs font-bold uppercase tracking-wide %s" cls) ] [ str label ]
 
 let private scoreText (g: Game) =
-    match g.OurScore, g.OpponentScore with
-    | Some us, Some them -> sprintf "%d – %d" us them
+    match g.AwayScore, g.HomeScore with
+    | Some a, Some h -> sprintf "%d – %d" a h
     | _ -> "—"
+
+/// Team logo + name, used inside the matchup cell. Our team gets the accent.
+let private teamLabel (t: GameTeam) (isUs: bool) =
+    span [ _class "inline-flex items-center gap-1.5" ] [
+        match t.Logo with
+        | Some url -> img [ _src url; _alt (sprintf "%s logo" t.Name); _class "h-6 w-6 shrink-0 rounded-full bg-white/80 object-contain p-0.5 ring-1 ring-line" ]
+        | None -> ()
+        span [ _class (if isUs then "font-bold text-accent-text" else "") ] [ str t.Name ]
+    ]
+
+/// "Away @ Home" matchup with logos.
+let matchup (g: Game) =
+    span [ _class "inline-flex flex-wrap items-center gap-x-2 gap-y-1" ] [
+        teamLabel g.Away (not g.IsHome)
+        span [ _class "text-ink-muted" ] [ str "@" ]
+        teamLabel g.Home g.IsHome
+    ]
 
 /// One row in a schedule list. Completed games link to their EasyScore box score.
 let gameRow (g: Game) =
-    let homeAway = if g.IsHome then "vs" else "@"
     let baseCls = "border-b border-line transition-colors hover:bg-row-hover"
     let rowAttrs =
         match g.BoxScoreUrl with
@@ -56,7 +72,7 @@ let gameRow (g: Game) =
         | None -> scoreText g
     tr rowAttrs [
         td [ _class "py-3 pr-4 text-ink-muted whitespace-nowrap" ] [ str (g.Date.ToString "ddd, MMM d") ]
-        td [ _class "py-3 pr-4 font-semibold text-ink-strong" ] [ str (sprintf "%s %s" homeAway g.Opponent) ]
+        td [ _class "py-3 pr-4 font-semibold text-ink-strong" ] [ matchup g ]
         td [ _class "py-3 pr-4 text-ink-muted" ] [ str g.Location ]
         td [ _class "py-3 pr-4 font-bold text-accent-text whitespace-nowrap" ] [ str score ]
         td [ _class "py-3" ] [ statusBadge g.Status ]
@@ -65,9 +81,7 @@ let gameRow (g: Game) =
 /// The live scoreboard banner fragment returned by /live. The linescore itself
 /// is EasyScore's stream overlay for the game, embedded in an iframe.
 let liveBanner (lg: LiveGame) =
-    let matchup =
-        if lg.IsHome then sprintf "Barracudas vs %s" lg.Opponent
-        else sprintf "Barracudas @ %s" lg.Opponent
+    let matchup = sprintf "%s @ %s" lg.AwayName lg.HomeName
     let overlayUrl = sprintf "https://www.easyscore.com/overlays/linescores/%s" lg.GameId
     let gamecastUrl = sprintf "https://www.easyscore.com/live/gamecast/%s" lg.GameId
     div [ _class "bg-red-700 text-white" ] [

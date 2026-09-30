@@ -2,6 +2,7 @@ module Barracudas.Web.Views.Pages.Players
 
 open Giraffe.ViewEngine
 open Barracudas.Web.Domain
+open Barracudas.Web.EasyScore.Api
 open Barracudas.Web.Views.Components
 
 let private num (n: int option) =
@@ -74,28 +75,35 @@ let private baseColumns =
 /// off a player (None when the player has no row in that category).
 type private StatCol =
     { Key: string
-      Category: string
+      Category: StatCategory
       Label: string
       Full: string
       Value: Player -> string option }
 
+/// Display heading for a stat category (the popup groups columns under these).
+let private categoryLabel =
+    function
+    | Offense -> "Batting"
+    | Fielding -> "Fielding"
+    | Pitching -> "Pitching"
+
 let private bat key label full (v: BattingStats -> string) : StatCol =
     { Key = "b_" + key
-      Category = "Batting"
+      Category = Offense
       Label = label
       Full = full
       Value = fun p -> p.Batting |> Option.map v }
 
 let private fld key label full (v: FieldingStats -> string) : StatCol =
     { Key = "f_" + key
-      Category = "Fielding"
+      Category = Fielding
       Label = label
       Full = full
       Value = fun p -> p.Fielding |> Option.map v }
 
 let private pit key label full (v: PitchingStats -> string) : StatCol =
     { Key = "p_" + key
-      Category = "Pitching"
+      Category = Pitching
       Label = label
       Full = full
       Value = fun p -> p.Pitching |> Option.map v }
@@ -228,15 +236,16 @@ let private hxLink (cols: string list) (sort: string option) (dir: string) (menu
       _hxSwap "outerHTML" ]
 
 /// Clicking a header sorts ascending; clicking the active column flips the direction.
-/// Sorting preserves the current column set and popup state.
-let private header (cols: string list) (menu: bool) (active: string option) (desc: bool) (col: Column) =
+/// Sorting preserves the current column set but always closes the column picker
+/// popup (so a sort click never re-opens it).
+let private header (cols: string list) (active: string option) (desc: bool) (col: Column) =
     let isActive = active = Some col.Key
     let nextDir = if isActive && not desc then "desc" else "asc"
     let arrow = if isActive then (if desc then " ▼" else " ▲") else ""
 
     let attrs =
         _class (col.HeaderClass + " cursor-pointer select-none hover:underline")
-        :: hxLink cols (Some col.Key) nextDir menu
+        :: hxLink cols (Some col.Key) nextDir false
 
     th (if col.Full <> "" then attrs @ [ _title col.Full ] else attrs) [ str (col.Label + arrow) ]
 
@@ -271,7 +280,7 @@ let private columnToggle (cols: string list) (sort: string option) (desc: bool) 
 
 /// The "Columns" button + dropdown panel, grouped batting / fielding / pitching.
 let private columnsMenu (cols: string list) (sort: string option) (desc: bool) (menu: bool) =
-    let group (cat: string) =
+    let group (cat: StatCategory) =
         statCatalog
         |> List.filter (fun s -> s.Category = cat)
         |> List.map (columnToggle cols sort desc)
@@ -289,12 +298,12 @@ let private columnsMenu (cols: string list) (sort: string option) (desc: bool) (
           div
               [ _class
                     "absolute right-0 z-30 mt-2 w-72 max-w-[calc(100vw-2rem)] rounded-lg border border-barracuda-accent/50 bg-page-2 p-3 shadow-xl shadow-black/40" ]
-              [ for cat in [ "Batting"; "Fielding"; "Pitching" ] do
+              [ for cat in [ Offense; Fielding; Pitching ] do
                     yield
                         h3
                             [ _class
                                   "mt-3 mb-1.5 text-xs font-black uppercase tracking-wider text-accent-text first:mt-0" ]
-                            [ str cat ]
+                            [ str (categoryLabel cat) ]
 
                     yield div [ _class "flex flex-wrap gap-1.5" ] (group cat) ] ]
 
@@ -316,7 +325,7 @@ let rosterPanel
                     [ thead
                           [ _class
                                 "border-b border-barracuda-accent/40 text-xs font-bold uppercase tracking-wider text-accent-text" ]
-                          [ tr [] [ for c in activeColumns cols -> header cols menu sort desc c ] ]
+                          [ tr [] [ for c in activeColumns cols -> header cols sort desc c ] ]
                       tbody [] [ for p in applySort sort desc players -> row cols p ] ] ] ]
 
 /// Full players page. Column set + sort come from the query string so a shared

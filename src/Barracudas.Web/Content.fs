@@ -6,7 +6,12 @@ open System.Text.Json.Serialization
 
 // Editable "About" content, loaded from content/about.json (not from EasyScore).
 
-type Practice = { Day: string; Time: string; Location: string }
+type Practice =
+    { Day: string
+      Time: string
+      Location: string
+      Lat: float option
+      Lon: float option }
 type Contact = { Role: string; Name: string; Email: string }
 
 type AboutContent =

@@ -23,10 +23,13 @@ module EasyScoreError =
 
 let private jsonOptions =
     let o = JsonSerializerOptions(PropertyNameCaseInsensitive = true)
+
     JsonFSharpOptions
         .Default()
         .WithSkippableOptionFields(SkippableOptionFields.Always, deserializeNullAsNone = true)
-        .AddToJsonSerializerOptions o
+        .AddToJsonSerializerOptions
+        o
+
     o
 
 let private decode<'T> (path: string) (body: string) : Result<'T, EasyScoreError> =
@@ -59,8 +62,7 @@ type TeamsApi(http: HttpClient) =
         getJson http $"teams?byRound=%d{roundId}&lg=%d{leagueId}&yr=%d{year}"
 
     /// Full record of a single team (carries the brand colour).
-    member _.ById(teamId: int) : Async<Result<TeamDetailDto list, EasyScoreError>> =
-        getJson http $"teams?id=%d{teamId}"
+    member _.ById(teamId: int) : Async<Result<TeamDetailDto list, EasyScoreError>> = getJson http $"teams?id=%d{teamId}"
 
 /// Full game schedule of a round (all teams, results included once played).
 type ScheduleApi(http: HttpClient) =
@@ -70,12 +72,13 @@ type ScheduleApi(http: HttpClient) =
 /// Licensed players of the federation user (all teams; filter by Team name).
 type PlayersApi(http: HttpClient) =
     member _.ByUser(userId: string) : Async<Result<PlayerDto list, EasyScoreError>> =
-        getJson http $"players?uid=%s{System.Uri.EscapeDataString userId}"
+        $"players?uid=%s{System.Uri.EscapeDataString userId}" |> getJson http
 
 /// A single game by id, including its linescore grid (used for box scores).
 type GamesApi(http: HttpClient) =
     member _.ById(gameId: int) : Async<Result<GameDetailDto list, EasyScoreError>> =
-        getJson http $"games?id=%d{gameId}&byYear=0&yr=0&lg=0&rd=0&isAdmin=0&byUser=0&idLive=0&getLive=0&includeAll=0"
+        $"games?id=%d{gameId}&byYear=0&yr=0&lg=0&rd=0&isAdmin=0&byUser=0&idLive=0&getLive=0&includeAll=0"
+        |> getJson http
 
 /// The three stat categories the /stats endpoint serves (its `cat` parameter).
 type StatCategory =

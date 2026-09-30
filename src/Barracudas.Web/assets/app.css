@@ -3,14 +3,59 @@
 /* Scan the F# view files for utility class names. */
 @source "../**/*.fs";
 
-/* Oakland A's palette → green + gold, expanded into a usable scale.
-   Utilities: bg-barracuda, bg-barracuda-dark, bg-barracuda-light,
-   text-barracuda-accent, text-barracuda-gold, etc. */
-@theme {
-  --color-barracuda-dark: #00211a;   /* page canvas */
-  --color-barracuda: #003831;        /* primary green (A's) */
-  --color-barracuda-light: #015c47;  /* cards / hovers */
-  --color-barracuda-line: #0a6e54;   /* borders */
-  --color-barracuda-accent: #efb21e; /* gold (A's) */
-  --color-barracuda-gold: #ffc733;   /* bright gold for emphasis */
+/* Adaptive surface/text tokens — follow the device color scheme.
+   Brand chrome (nav, footer, live banner) stays green in BOTH modes;
+   only the main content area flips between light and dark. */
+:root {
+  --page: #ffffff;
+  --page-2: #eaf1ee;
+  --ink: #0a2620;
+  --ink-muted: #51635c;
+  --ink-strong: #00251d;
+  --accent-text: #00513f;            /* gold reads poorly on white → dark green in light mode */
+  --card: #ffffff;
+  --card-ring: rgba(0, 56, 49, 0.15);
+  --line: rgba(0, 56, 49, 0.14);
+  --row-hover: rgba(0, 56, 49, 0.05);
 }
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --page: #00211a;
+    --page-2: #003831;
+    --ink: #ecfdf5;
+    --ink-muted: rgba(167, 243, 208, 0.72);
+    --ink-strong: #ffffff;
+    --accent-text: #efb21e;          /* gold in dark mode */
+    --card: rgba(1, 92, 71, 0.55);
+    --card-ring: rgba(239, 178, 30, 0.30);
+    --line: rgba(10, 110, 84, 0.40);
+    --row-hover: rgba(1, 92, 71, 0.40);
+  }
+}
+
+@theme {
+  /* Oakland A's brand palette (static). */
+  --color-barracuda-dark: #00211a;
+  --color-barracuda: #003831;
+  --color-barracuda-light: #015c47;
+  --color-barracuda-line: #0a6e54;
+  --color-barracuda-accent: #efb21e;
+  --color-barracuda-gold: #ffc733;
+
+  /* Adaptive content tokens (resolve to the vars above per color scheme). */
+  --color-page: var(--page);
+  --color-page-2: var(--page-2);
+  --color-ink: var(--ink);
+  --color-ink-muted: var(--ink-muted);
+  --color-ink-strong: var(--ink-strong);
+  --color-accent-text: var(--accent-text);
+  --color-card: var(--card);
+  --color-card-ring: var(--card-ring);
+  --color-line: var(--line);
+  --color-row-hover: var(--row-hover);
+}
+
+/* Hide the default <details> disclosure triangle on the mobile menu toggle. */
+summary { list-style: none; }
+summary::-webkit-details-marker { display: none; }

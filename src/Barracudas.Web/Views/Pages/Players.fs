@@ -6,7 +6,7 @@ open Barracudas.Web.Views.Components
 
 let private num (n: int option) =
     match n with
-    | Some n -> sprintf "#%d" n
+    | Some n -> $"#%d{n}"
     | None -> "—"
 
 let private orDash (s: string) = if s = "" then "—" else s
@@ -17,15 +17,106 @@ let private batsThrows (p: Player) =
     | "", "" -> "—"
     | b, t -> sprintf "%s/%s" (orDash b) (orDash t)
 
+/// Comparable cell value for column sorting; Missing rows always go to the bottom.
+type private SortKey =
+    | Num of float
+    | Str of string
+    | Missing
+
+/// One roster column: how to render its header and cells, and how to order rows by it.
+type private Column =
+    { Key: string
+      Label: string
+      HeaderClass: string
+      Cell: Player -> XmlNode
+      SortKey: Player -> SortKey }
+
+let private avgKey (p: Player) =
+    match p.BattingAvg with
+    | Some a ->
+        match System.Double.TryParse(a, System.Globalization.CultureInfo.InvariantCulture) with
+        | true, v -> Num v
+        | false, _ -> Missing
+    | None -> Missing
+
+let private columns =
+    [ { Key = "no"
+        Label = "No."
+        HeaderClass = "pb-2 pr-4"
+        Cell = fun p -> td [ _class "py-3 pr-4 font-bold text-accent-text" ] [ str (num p.Number) ]
+        SortKey =
+          fun p ->
+              match p.Number with
+              | Some n -> Num(float n)
+              | None -> Missing }
+      { Key = "name"
+        Label = "Name"
+        HeaderClass = "pb-2 pr-4"
+        Cell =
+          fun p ->
+              td
+                  [ _class "py-3 pr-4 font-semibold text-ink-strong" ]
+                  [ a [ _href (sprintf "/players/%s" p.Id); _class "hover:text-accent-text" ] [ str p.ListName ] ]
+        SortKey = fun p -> Str p.ListName }
+      { Key = "bt"
+        Label = "B/T"
+        HeaderClass = "pb-2 pr-4 text-center"
+        Cell = fun p -> td [ _class "py-3 pr-4 text-center" ] [ str (batsThrows p) ]
+        SortKey =
+          fun p ->
+              match batsThrows p with
+              | "—" -> Missing
+              | s -> Str s }
+      { Key = "avg"
+        Label = "AVG"
+        HeaderClass = "pb-2 text-center"
+        Cell =
+          fun p -> td [ _class "py-3 text-center font-bold text-accent-text" ] [ str (defaultArg p.BattingAvg "—") ]
+        SortKey = avgKey } ]
+
+/// Players already arrive in the default order (last name, first name);
+/// no/unknown sort key keeps it.
+let private applySort (sort: string option) (desc: bool) (players: Player list) =
+    match sort |> Option.bind (fun k -> columns |> List.tryFind (fun c -> c.Key = k)) with
+    | None -> players
+    | Some col ->
+        let missing, present = players |> List.partition (fun p -> col.SortKey p = Missing)
+
+        let sorted =
+            if desc then
+                present |> List.sortByDescending col.SortKey
+            else
+                present |> List.sortBy col.SortKey
+
+        sorted @ missing
+
+/// Clicking a header sorts ascending; clicking the active column flips the direction.
+let private header (active: string option) (desc: bool) (col: Column) =
+    let isActive = active = Some col.Key
+    let nextDir = if isActive && not desc then "desc" else "asc"
+    let arrow = if isActive then (if desc then " ▼" else " ▲") else ""
+
+    th
+        [ _class (col.HeaderClass + " cursor-pointer select-none hover:underline")
+          _hxGet (sprintf "/players/partial?sort=%s&dir=%s" col.Key nextDir)
+          _hxTarget "#players-table"
+          _hxSwap "outerHTML" ]
+        [ str (col.Label + arrow) ]
+
 let private row (p: Player) =
-    tr
-        [ _class "border-b border-line transition-colors hover:bg-row-hover" ]
-        [ td [ _class "py-3 pr-4 font-bold text-accent-text" ] [ str (num p.Number) ]
-          td
-              [ _class "py-3 pr-4 font-semibold text-ink-strong" ]
-              [ a [ _href (sprintf "/players/%s" p.Id); _class "hover:text-accent-text" ] [ str p.ListName ] ]
-          td [ _class "py-3 pr-4 text-center" ] [ str (batsThrows p) ]
-          td [ _class "py-3 text-center font-bold text-accent-text" ] [ str (defaultArg p.BattingAvg "—") ] ]
+    tr [ _class "border-b border-line transition-colors hover:bg-row-hover" ] [ for c in columns -> c.Cell p ]
+
+/// The swappable roster table (also returned by /players/partial).
+let rosterTable (sort: string option) (desc: bool) (players: Player list) : XmlNode =
+    div
+        [ _id "players-table"; _class "overflow-x-auto" ]
+        [ table
+              [ _class "w-full min-w-[24rem] text-left text-sm" ]
+              [ thead
+                    [ _class
+                          "border-b border-barracuda-accent/40 text-xs font-bold uppercase tracking-wider text-accent-text" ]
+                    [ tr [] [ for c in columns -> header sort desc c ] ]
+                tbody [] [ for p in applySort sort desc players -> row p ] ] ]
 
 let listView (players: Player list) : XmlNode list =
     [ pageHeader "Players" "Team roster"
@@ -34,20 +125,7 @@ let listView (players: Player list) : XmlNode list =
               [ _class "rounded-lg bg-card p-6 text-ink-muted ring-1 ring-card-ring" ]
               [ str "The roster couldn't be loaded right now. Please check back later." ]
       else
-          div
-              [ _class "overflow-x-auto" ]
-              [ table
-                    [ _class "w-full min-w-[24rem] text-left text-sm" ]
-                    [ thead
-                          [ _class
-                                "border-b border-barracuda-accent/40 text-xs font-bold uppercase tracking-wider text-accent-text" ]
-                          [ tr
-                                []
-                                [ th [ _class "pb-2 pr-4" ] [ str "No." ]
-                                  th [ _class "pb-2 pr-4" ] [ str "Name" ]
-                                  th [ _class "pb-2 pr-4 text-center" ] [ str "B/T" ]
-                                  th [ _class "pb-2 text-center" ] [ str "AVG" ] ] ]
-                      tbody [] [ for p in players -> row p ] ] ] ]
+          rosterTable None false players ]
 
 let private statBox (label: string) (value: string) =
     div
@@ -148,7 +226,6 @@ let detailView (pl: Player) (stats: PlayerStats) : XmlNode list =
           [ statBox "Bats" (orDash pl.Bats)
             statBox "Throws" (orDash pl.Throws)
             statBox "AVG" (defaultArg pl.BattingAvg "—") ]
-          
 
       match stats.Batting with
       | Some b -> battingTable b
@@ -160,15 +237,5 @@ let detailView (pl: Player) (stats: PlayerStats) : XmlNode list =
       | Some p -> pitchingTable p
       | None -> ()
       
-      
-      
-      match stats.Batting, stats.Fielding, stats.Pitching with
-      | Some b, _, _ -> failwith "todo"
-      | _, Some f, Some value1 -> failwith "todo"
-      | Some value, Some value1, None -> failwith "todo"
-      | Some value, Some value1, Some value2 -> failwith "todo"
-      | None, None, None ->
+      if stats.Batting.IsNone && stats.Fielding.IsNone && stats.Pitching.IsNone then
           p [ _class "mt-8 rounded-lg bg-card p-6 text-ink-muted ring-1 ring-card-ring" ] [ str "No season stats yet." ] ]
-
-      // if stats.Batting.IsNone && stats.Fielding.IsNone && stats.Pitching.IsNone then
-          // p [ _class "mt-8 rounded-lg bg-card p-6 text-ink-muted ring-1 ring-card-ring" ] [ str "No season stats yet." ] ]

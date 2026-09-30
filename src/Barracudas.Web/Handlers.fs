@@ -59,6 +59,15 @@ let players : HttpHandler =
             return! renderPage "players" "Players" ctx (Pages.Players.listView ps) next ctx
         }
 
+let playersPartial : HttpHandler =
+    fun next ctx ->
+        task {
+            let sort = ctx.TryGetQueryStringValue "sort"
+            let desc = ctx.TryGetQueryStringValue "dir" = Some "desc"
+            let! ps = (client ctx).GetPlayers()
+            return! htmlView (Pages.Players.rosterTable sort desc ps) next ctx
+        }
+
 let player (id: string) : HttpHandler =
     fun next ctx ->
         task {

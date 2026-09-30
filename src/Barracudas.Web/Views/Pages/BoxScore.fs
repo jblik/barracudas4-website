@@ -44,30 +44,31 @@ let private scoreboard (bs: BoxScore) =
             else
                 "font-semibold text-ink"
 
-        let block =
-            [ logo t.Logo t.Name "h-10 w-10"
-              span [ _class $"text-lg %s{nameCls}" ] [ str t.Name ] ]
-
+        // Centred on mobile; pinned to the outer edge (logo+name then score) on
+        // desktop, mirrored for the home side so both runs hug the centre word.
         div
             [ _class (
-                  sprintf "flex flex-1 items-center gap-3 %s" (if alignRight then "flex-row-reverse text-right" else "")
+                  sprintf
+                      "flex flex-1 items-center justify-center gap-3 sm:justify-start %s"
+                      (if alignRight then "sm:flex-row-reverse sm:text-right" else "sm:flex-row")
               ) ]
-            (block
-             @ [ span
-                     [ _class (
-                           sprintf
-                               "text-4xl font-black tabular-nums %s"
-                               (if won then "text-accent-text" else "text-ink-muted")
-                       ) ]
-                     [ str (string runs) ] ])
+            [ logo t.Logo t.Name "h-10 w-10"
+              span [ _class $"text-lg %s{nameCls}" ] [ str t.Name ]
+              span
+                  [ _class (
+                        sprintf
+                            "text-4xl font-black tabular-nums %s"
+                            (if won then "text-accent-text" else "text-ink-muted")
+                    ) ]
+                  [ str (string runs) ] ]
 
     section
         [ _class "rounded-lg bg-card p-5 ring-1 ring-card-ring" ]
         [ div
-              [ _class "flex flex-col items-stretch gap-3 sm:flex-row sm:items-center" ]
+              [ _class "flex flex-col items-stretch gap-3 sm:flex-row sm:items-center sm:gap-4" ]
               [ side bs.Away awayRuns (awayRuns > homeRuns) false
                 span
-                    [ _class "text-center text-sm font-bold uppercase tracking-wide text-ink-muted" ]
+                    [ _class "shrink-0 text-center text-sm font-bold uppercase tracking-wide text-ink-muted" ]
                     [ str (
                           "Final"
                           + (maybeInningsPlayed |> Option.map (fun ip -> $" / {ip}") |> Option.defaultValue "")
@@ -135,6 +136,12 @@ let private battingTable (t: BoxTeam) =
     let num (n: int) =
         td [ _class "px-2.5 py-2 text-center tabular-nums text-ink" ] [ str (string n) ]
 
+    // Our roster has player pages; opponents don't, so only our names link out.
+    let nameCell (b: BoxBatter) =
+        match (if t.IsUs then b.PlayerId else None) with
+        | Some pid -> a [ _href $"/players/%d{pid}"; _class "hover:text-accent-text hover:underline" ] [ str b.Name ]
+        | None -> str b.Name
+
     let batterRow (b: BoxBatter) =
         match b.Order with
         | None ->
@@ -159,7 +166,7 @@ let private battingTable (t: BoxTeam) =
                             [ span
                                   [ _class "w-4 text-right text-xs tabular-nums text-ink-muted" ]
                                   [ str (if b.IsSub then "" else string spot) ]
-                              span [ _class (if b.IsSub then "pl-3" else "") ] [ str b.Name ]
+                              span [ _class (if b.IsSub then "pl-3" else "") ] [ nameCell b ]
                               span [ _class "text-xs font-medium text-ink-muted" ] [ str b.Pos ] ] ]
                   num b.AB
                   num b.R
@@ -238,26 +245,58 @@ let private teamSection (t: BoxTeam) (isUs: bool) =
 
 // --- Game notes ---------------------------------------------------------------
 
-let private notesSection (notes: BoxNote list) (awayAbbr: string) (homeAbbr: string) =
-    let line (abbr: string) (text: string option) =
+/// Full category name + tooltip explanation for each note abbreviation.
+let private noteMeta =
+    dict
+        [ "2B", ("Doubles", "Doubles (2B) — two-base hits")
+          "3B", ("Triples", "Triples (3B) — three-base hits")
+          "HR", ("Home Runs", "Home runs (HR)")
+          "SF", ("Sacrifice Flies", "Sacrifice flies (SF)")
+          "GIDP", ("Grounded Into Double Play", "Grounded into double play (GIDP)")
+          "SB", ("Stolen Bases", "Stolen bases (SB)")
+          "CS", ("Caught Stealing", "Caught stealing (CS)")
+          "E", ("Errors", "Fielding errors (E)")
+          "DP", ("Double Plays", "Double plays turned (DP)")
+          "PB", ("Passed Balls", "Passed balls (PB)")
+          "WP", ("Wild Pitches", "Wild pitches (WP)")
+          "HBP", ("Hit By Pitch", "Hit by pitch (HBP)")
+          "BK", ("Balks", "Balks (BK)") ]
+
+let private notesSection (notes: BoxNote list) (away: BoxTeam) (home: BoxTeam) =
+    // The opponent's name is tinted with their brand colour; ours stays gold.
+    let teamLine (t: BoxTeam) (text: string option) =
         match text with
         | Some s ->
-            [ p [ _class "leading-snug" ] [ span [ _class "font-bold text-accent-text" ] [ str (abbr + ": ") ]; str s ] ]
+            let nameAttrs =
+                match t.Color with
+                | Some c -> [ _class "font-bold"; _style $"color:%s{c}" ]
+                | None -> [ _class "font-bold text-accent-text" ]
+
+            [ p
+                  [ _class "leading-snug" ]
+                  [ span nameAttrs [ str (t.Abbr + ":") ]
+                    span [ _class "ml-1.5 font-semibold text-ink-strong" ] [ str s ] ] ]
         | None -> []
 
     section
         [ _class "mt-8" ]
         [ h2 [ _class "mb-3 text-lg font-black uppercase tracking-tight text-ink-strong" ] [ str "Game Notes" ]
           div
-              [ _class "space-y-3 rounded-lg bg-card p-5 text-sm text-ink ring-1 ring-card-ring" ]
+              [ _class "space-y-3" ]
               [ for n in notes ->
+                    let full, tip =
+                        match noteMeta.TryGetValue n.Label with
+                        | true, v -> v
+                        | _ -> n.Label, n.Label
+
                     div
-                        []
-                        ([ div
-                               [ _class "mb-0.5 text-xs font-bold uppercase tracking-wide text-ink-muted" ]
-                               [ str n.Label ] ]
-                         @ line awayAbbr n.Away
-                         @ line homeAbbr n.Home) ] ]
+                        [ _class "rounded-lg bg-card p-4 text-sm text-ink ring-1 ring-card-ring" ]
+                        ([ h3
+                               [ _class "mb-1.5 inline-block cursor-help text-sm font-black uppercase tracking-wide text-ink-strong"
+                                 _title tip ]
+                               [ str full ] ]
+                         @ teamLine away n.Away
+                         @ teamLine home n.Home) ] ]
 
 // --- Page ---------------------------------------------------------------------
 
@@ -279,7 +318,7 @@ let view (bs: BoxScore) : XmlNode list =
       teamSection bs.Away bs.Away.IsUs
       teamSection bs.Home bs.Home.IsUs
       if not (List.isEmpty bs.Notes) then
-          notesSection bs.Notes bs.Away.Abbr bs.Home.Abbr
+          notesSection bs.Notes bs.Away bs.Home
       if not (String.length bs.Umpires = 0 && String.length bs.Scorer = 0) then
           p
               [ _class "mt-8 text-xs text-ink-muted" ]

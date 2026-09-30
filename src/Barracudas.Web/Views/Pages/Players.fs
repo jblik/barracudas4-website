@@ -146,11 +146,11 @@ let private statTable (title: string) (cells: (string * string * string) list) =
                     [ _class "w-full text-center text-sm" ]
                     [ thead
                           [ _class
-                                "border-b border-barracuda-accent/40 text-xs font-bold uppercase tracking-wider text-accent-text" ]
+                                "border-b border-barracuda-accent/40 text-xs font-bold tracking-wider text-accent-text" ]
                           [ tr
                                 []
                                 [ for label, full, _ in cells ->
-                                      th [ _class "cursor-help px-3 py-2"; _title full ] [ str label ] ] ]
+                                      th [ _class "cursor-help whitespace-nowrap px-3 py-2"; _title full ] [ str label ] ] ]
                       tbody
                           []
                           [ tr
@@ -233,11 +233,11 @@ let private logTable (title: string) (columns: (string * string * ('row -> strin
                     [ _class "w-full text-center text-sm" ]
                     [ thead
                           [ _class
-                                "border-b border-barracuda-accent/40 text-xs font-bold uppercase tracking-wider text-accent-text" ]
+                                "border-b border-barracuda-accent/40 text-xs font-bold tracking-wider text-accent-text" ]
                           [ tr
                                 []
                                 [ for label, full, _ in columns ->
-                                      th [ _class "cursor-help px-3 py-2"; _title full ] [ str label ] ] ]
+                                      th [ _class "cursor-help whitespace-nowrap px-3 py-2"; _title full ] [ str label ] ] ]
                       tbody
                           []
                           [ for row in rows ->

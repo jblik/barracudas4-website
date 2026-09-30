@@ -18,8 +18,8 @@ type AppConfig =
       RoundFilter: string
       /// EasyScore team id for Zürich Barracudas 4 (13069).
       TeamId: int
-      /// Exact team name used to filter the /players roster.
-      TeamName: string
+      /// EasyScore player ids of the active roster (top-level ActiveRoster array).
+      ActiveRoster: int list
       /// Current season (year).
       Season: int
       /// Live banner poll interval in seconds.
@@ -41,6 +41,12 @@ let load (cfg: IConfiguration) : AppConfig =
       LeagueId = intOr "LeagueId" 10143
       RoundFilter = str "RoundFilter" "Ost"
       TeamId = intOr "TeamId" 13069
-      TeamName = str "TeamName" "Zürich Barracudas 4"
+      ActiveRoster =
+        cfg.GetSection("ActiveRoster").GetChildren()
+        |> Seq.choose (fun c ->
+            match System.Int32.TryParse c.Value with
+            | true, v -> Some v
+            | _ -> None)
+        |> List.ofSeq
       Season = intOr "Season" System.DateTime.Now.Year
       LivePollSeconds = intOr "LivePollSeconds" 25 }

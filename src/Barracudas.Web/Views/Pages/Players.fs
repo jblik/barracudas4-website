@@ -17,7 +17,7 @@ let private row (p: Player) =
     tr [ _class "border-b border-line transition-colors hover:bg-row-hover" ] [
         td [ _class "py-3 pr-4 font-bold text-accent-text" ] [ str (num p.Number) ]
         td [ _class "py-3 pr-4 font-semibold text-ink-strong" ] [
-            a [ _href (sprintf "/players/%s" p.Id); _class "hover:text-accent-text" ] [ str p.Name ]
+            a [ _href (sprintf "/players/%s" p.Id); _class "hover:text-accent-text" ] [ str p.ListName ]
         ]
         td [ _class "py-3 pr-4 text-center" ] [ str (batsThrows p) ]
         td [ _class "py-3 text-center font-bold text-accent-text" ] [ str (defaultArg p.BattingAvg "—") ]

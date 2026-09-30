@@ -75,7 +75,7 @@ type EasyScoreApiClient(http: HttpClient, cfg: Config.AppConfig, logger: ILogger
         asyncResult {
             let! players = playersApi.ByUser cfg.RequestUserId
             let! offense = offenseStats ()
-            return! Convert.toRoster cfg.TeamName players offense
+            return! Convert.toRoster cfg.ActiveRoster players offense
         }
 
     let playerStats (id: string) =
@@ -87,7 +87,7 @@ type EasyScoreApiClient(http: HttpClient, cfg: Config.AppConfig, logger: ILogger
             let! playerId =
                 match System.Int32.TryParse id with
                 | true, v -> Ok v
-                | _ -> Error(ConvertError(sprintf "invalid player id '%s'" id))
+                | _ -> Error(ConvertError $"invalid player id '%s{id}'")
             return! Convert.toPlayerStats playerId offense fielding pitching
         }
 

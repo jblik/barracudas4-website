@@ -39,4 +39,4 @@ jobs:
     runs-on: host
     needs: docker
     steps:
-      - run: ssh -i {{ secrets.DEPLOY_SERVER_SSH_KEY_FILE }} -o BatchMode=yes -o StrictHostKeyChecking=accept-new -o ConnectTimeout=10 root@${{ secrets.DEPLOY_SERVER_IP }} "docker pull jblikdocker/barracudas4-website:latest && docker restart barracudas_website"
+      - run: ssh -i ${{ secrets.DEPLOY_SERVER_SSH_KEY_FILE }} -o BatchMode=yes -o StrictHostKeyChecking=accept-new -o ConnectTimeout=10 root@${{ secrets.DEPLOY_SERVER_IP }} "docker pull jblikdocker/barracudas4-website:latest && docker restart barracudas_website"

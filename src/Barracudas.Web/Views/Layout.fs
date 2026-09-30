@@ -18,6 +18,7 @@ let page (pollSeconds: int) (active: string) (pageTitle: string) (content: XmlNo
             meta [ _charset "utf-8" ]
             meta [ _name "viewport"; _content "width=device-width, initial-scale=1" ]
             title [] [ str (sprintf "%s · Zürich Barracudas" pageTitle) ]
+            link [ _rel "icon"; _type "image/png"; _href "/img/barracudas-logo.png" ]
             link [ _rel "stylesheet"; _href "/css/site.css" ]
             script [ _src "/js/htmx.min.js"; _defer ] []
         ]
@@ -31,9 +32,9 @@ let page (pollSeconds: int) (active: string) (pageTitle: string) (content: XmlNo
             nav [ _class "border-b-2 border-barracuda-accent bg-barracuda shadow-lg shadow-black/30" ] [
                 div [ _class "mx-auto flex max-w-5xl items-center gap-1 px-4 py-3" ] [
                     a [ _href "/"; _class "mr-4 flex items-center gap-2.5" ] [
-                        span [ _class "flex h-9 w-9 items-center justify-center rounded-full bg-barracuda-accent text-lg font-black text-barracuda-dark shadow" ] [ str "B" ]
+                        img [ _src "/img/barracudas-logo.png"; _alt "Zürich Barracudas logo"; _class "h-10 w-auto" ]
                         span [ _class "text-lg font-black uppercase tracking-tight text-barracuda-accent" ] [ str "Barracudas" ]
-                        span [ _class "whitespace-nowrap rounded bg-barracuda-light px-1.5 py-0.5 text-xs font-bold uppercase tracking-wide text-barracuda-gold ring-1 ring-barracuda-accent/40" ] [ str "1. Liga" ]
+                        span [ _class "hidden whitespace-nowrap rounded bg-barracuda-light px-1.5 py-0.5 text-xs font-bold uppercase tracking-wide text-barracuda-gold ring-1 ring-barracuda-accent/40 md:inline-block" ] [ str "1. Liga" ]
                     ]
                     navLink "/schedule" "Schedule" (active = "schedule")
                     navLink "/standings" "Standings" (active = "standings")

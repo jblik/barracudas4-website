@@ -4,7 +4,6 @@ open System.Text.Json.Serialization
 
 /// Raw JSON shapes from api.easyscore.com/v2, exactly as served.
 /// Dates/times stay strings here — all parsing happens in Convert.
-
 /// GET /rounds?byLeague=1&lg={leagueId}
 type RoundDto =
     { ID: int
@@ -12,9 +11,7 @@ type RoundDto =
       League: string }
 
 /// GET /teams?byRound={roundId}&lg={leagueId}&yr={year}
-type TeamDto =
-    { Team: int
-      Name: string }
+type TeamDto = { Team: int; Name: string }
 
 /// GET /teams?id={teamId} — full team record (only the brand colour is used).
 type TeamDetailDto =
@@ -48,69 +45,69 @@ type GameDto =
 /// Stat values arrive pre-formatted as strings (".294", "10.50", "-.-").
 type OffenseStatsDto =
     { PlayerID: int
-      Team: int
+      Team: int option
       Pos: string option
-      G: int
-      PA: string
-      AB: string
-      R: string
-      H: string
-      RBI: string
+      G: int option
+      PA: string option
+      AB: string option
+      R: string option
+      H: string option
+      RBI: string option
       [<JsonPropertyName "2B">]
-      Doubles: string
+      Doubles: string option
       [<JsonPropertyName "3B">]
-      Triples: string
-      HR: string
-      TB: string
-      BB: string
-      SO: string
-      HBP: string
-      SB: string
-      CS: string
-      BA: string
-      OBP: string
-      SLG: string
-      OPS: string }
+      Triples: string option
+      HR: string option
+      TB: string option
+      BB: string option
+      SO: string option
+      HBP: string option
+      SB: string option
+      CS: string option
+      BA: string option
+      OBP: string option
+      SLG: string option
+      OPS: string option }
 
 /// GET /stats?…&cat=fld
 type FieldingStatsDto =
     { PlayerID: int
       Team: int
-      G: int
-      InningsPlayed: string
-      Putout: string
-      Assist: string
+      G: int option
+      InningsPlayed: string option
+      Putout: string option
+      Assist: string option
       [<JsonPropertyName "Outfield Assists">]
-      OutfieldAssists: string
-      Error: string
-      DP: string
-      PB: string
-      SBAtt: string
-      CSMade: string
-      RangeFactor: string
-      FPct: string }
+      OutfieldAssists: string option
+      Error: string option
+      DP: string option
+      PB: string option
+      SBAtt: string option
+      CSMade: string option
+      RangeFactor: string option
+      FPct: string option }
 
 /// GET /stats?…&cat=pit (note: G is a string here, unlike off/fld)
 type PitchingStatsDto =
     { PlayerID: int
       Team: int
-      G: string
-      GS: string
-      IP: string
-      HA: string
-      RA: string
-      ER: string
-      BBA: string
-      K: string
-      HBPA: string
-      WP: string
-      W: string
-      L: string
-      SV: string
-      BF: string
-      OppAVG: string
-      WHIP: string
-      ERA: string }
+      G: string option
+      GS: string option
+      IP: string option
+      HA: string option
+      RA: string option
+      ER: string option
+      BBA: string option
+      K: string option
+      HBPA: string option
+      WP: string option
+      W: string option
+      L: string option
+      SV: string option
+      BF: string option
+      OppAVG: string option
+      WHIP: string option
+      ERA: string option }
 
 /// GET /stats?…&cat=off&subCategory=log&playerID={id} — one row per game,
 /// newest first. BA is the season average through that game.

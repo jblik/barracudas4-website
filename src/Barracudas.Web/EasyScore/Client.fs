@@ -17,7 +17,7 @@ type IEasyScoreSource =
     abstract member GetTeamStats: unit -> Task<Result<TeamStat list, EasyScoreError>>
     abstract member GetPlayers: unit -> Task<Result<Player list, EasyScoreError>>
     abstract member GetPlayerStats: logger: ILogger -> id: string -> Task<Result<PlayerStats, EasyScoreError>>
-    abstract member GetBoxScore: gameId: string -> Task<Result<BoxScore option, EasyScoreError>>
+    abstract member GetBoxScore:  logger: ILogger -> gameId: string -> Task<Result<BoxScore option, EasyScoreError>>
     abstract member GetLiveGame: unit -> Task<Result<LiveGame option, EasyScoreError>>
 
 /// Data access for the handlers. One method per page concern; errors already
@@ -114,7 +114,7 @@ type EasyScoreApiClient(http: HttpClient, config: Config.AppConfig) =
         }
 
     /// A completed game's box score: linescore from /games, lines from /stats?box.
-    let boxScore (id: string) =
+    let boxScore (logger: ILogger) (id: string) =
         asyncResult {
             let! gameId =
                 match System.Int32.TryParse id with
@@ -150,7 +150,7 @@ type EasyScoreApiClient(http: HttpClient, config: Config.AppConfig) =
                     }
                 | None -> async { return Ok None }
 
-            return! Convert.toBoxScore config.TeamId gameId opponentColor detail box
+            return! Convert.toBoxScore logger config.TeamId gameId opponentColor detail box
         }
 
     let toTask (work: Async<Result<'a, EasyScoreError>>) = Async.StartImmediateAsTask work
@@ -173,7 +173,7 @@ type EasyScoreApiClient(http: HttpClient, config: Config.AppConfig) =
 
         member _.GetPlayerStats logger id = toTask (playerStats logger id)
 
-        member _.GetBoxScore id = toTask (boxScore id)
+        member _.GetBoxScore logger id = toTask (boxScore logger id)
 
         member _.GetLiveGame() =
             toTask (
@@ -228,7 +228,7 @@ type DegradingEasyScoreClient(source: IEasyScoreSource, logger: ILogger<Degradin
             orEmpty "GetPlayerStats" empty (source.GetPlayerStats logger id)
 
         member _.GetBoxScore id =
-            orEmpty "GetBoxScore" None (source.GetBoxScore id)
+            orEmpty "GetBoxScore" None (source.GetBoxScore logger id)
 
         member _.GetLiveGame() =
             orEmpty "GetLiveGame" None (source.GetLiveGame())

@@ -185,6 +185,107 @@ type PitchingLogDto =
       WHIP: string
       ERA: string }
 
+/// One side of a linescore entry (GET /games?id=…). `line` is keyed by inning
+/// number; values are ints, or the string "x" when the side didn't bat.
+type LineScoreSideDto =
+    { abbr: string
+      team: string
+      logo: string option
+      line: Map<string, System.Text.Json.JsonElement>
+      totals: LineScoreTotalsDto }
+
+and LineScoreTotalsDto = { R: int; H: int; E: int }
+
+/// One game's linescore grid (a single-element list in the response).
+type LineScoreEntryDto =
+    { away: LineScoreSideDto
+      home: LineScoreSideDto
+      innings: string }
+
+/// GET /games?id={gameId}&… — only the linescore is consumed here; the rest of
+/// the box score comes from /stats?box.
+type GameDetailDto =
+    { ID: int
+      AwayTeam: int
+      HomeTeam: int
+      LineScore: LineScoreEntryDto list }
+
+/// One batter's line in a box score (GET /stats?box={gameId}). The team totals
+/// row has Spot = 100 and an empty name.
+type BoxHitterDto =
+    { Spot: int
+      SubbedIn: string option
+      TopOrBot: string
+      Pos: string
+      playerName: string
+      AB: int
+      R: int
+      H: int
+      RBI: int
+      BB: int
+      SO: int
+      LOB: int
+      BA: string option }
+
+/// One pitcher's line in a box score (GET /stats?box). HA/RA/HRA = hits/runs/HR
+/// allowed; BBA = walks allowed; K = strikeouts.
+type BoxPitcherDto =
+    { PitcherNr: int
+      TopOrBot: string
+      playerName: string
+      IP: string
+      HA: int
+      RA: int
+      ER: int
+      BBA: int
+      K: int
+      HRA: int
+      BF: int
+      PitchCount: int
+      Strikes: int
+      ERA: string }
+
+/// A game note keyed by team side (T = away, B = home); either may be absent.
+type BoxNoteDto = { T: string option; B: string option }
+
+/// The box score payload (GET /stats?box={gameId} → [{ BoxScores }]).
+type BoxScoresDto =
+    { AwayTeam: string
+      HomeTeam: string
+      AwayTeamAbbr: string
+      HomeTeamAbbr: string
+      AwayTeamLogo: string option
+      HomeTeamLogo: string option
+      GameInfo: BoxGameInfoDto
+      AllHitters: BoxHitterDto list
+      AllPitchers: BoxPitcherDto list
+      AdditionalBatting2B: BoxNoteDto option
+      AdditionalBatting3B: BoxNoteDto option
+      AdditionalBattingHR: BoxNoteDto option
+      AdditionalBattingSF: BoxNoteDto option
+      AdditionalBattingGIDP: BoxNoteDto option
+      AdditionalBaserunningSB: BoxNoteDto option
+      AdditionalBaserunningCS: BoxNoteDto option
+      AdditionalFieldingError: BoxNoteDto option
+      AdditionalFieldingDPs: BoxNoteDto option
+      AdditionalFieldingPB: BoxNoteDto option
+      AdditionalPitchingWP: BoxNoteDto option
+      AdditionalPitchingHBP: BoxNoteDto option
+      AdditionalPitchingBalk: BoxNoteDto option }
+
+and BoxGameInfoDto =
+    { Date: string
+      Round: string
+      Misc: BoxMiscDto }
+
+and BoxMiscDto =
+    { Field: string
+      Umpires: string
+      Scorer: string }
+
+/// GET /stats?box — the response is a single-element list wrapping BoxScores.
+type BoxScoreResponseDto = { BoxScores: BoxScoresDto }
+
 /// GET /players?uid={userId}
 type PlayerDto =
     { ID: int

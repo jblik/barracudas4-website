@@ -146,4 +146,8 @@ type CachingEasyScoreSource(inner: IEasyScoreSource, cfg: Config.AppConfig, cach
         member _.GetPlayerStats id =
             policied $"playerstats:%s{id}" Policy.players (fun () -> inner.GetPlayerStats id)
 
+        // A completed game's box score never changes; cache it like other content.
+        member _.GetBoxScore id =
+            policied $"boxscore:%s{id}" Policy.content (fun () -> inner.GetBoxScore id)
+
         member _.GetLiveGame() = policied "live" Policy.live inner.GetLiveGame

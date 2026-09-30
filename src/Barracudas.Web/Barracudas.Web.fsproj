@@ -19,6 +19,7 @@
     <Compile Include="Views/Pages/Schedule.fs" />
     <Compile Include="Views/Pages/Standings.fs" />
     <Compile Include="Views/Pages/Players.fs" />
+    <Compile Include="Views/Pages/BoxScore.fs" />
     <Compile Include="Handlers.fs" />
     <Compile Include="Router.fs" />
     <Compile Include="Program.fs" />

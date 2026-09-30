@@ -105,7 +105,7 @@ let page (pollSeconds: int) (active: string) (pageTitle: string) (content: XmlNo
                         str " · 1. Liga · "
                         span [] [ str (string System.DateTime.Now.Year) ]
                     ]
-                    a [ _href "https://codeberg.org/jblik/barracudas-website"; _target "_blank"; _rel "noopener noreferrer"; _class "opacity-60 hover:opacity-100 transition-opacity" ] [
+                    a [ _href "https://codeberg.org/jblik/barracudas4-website"; _target "_blank"; _rel "noopener noreferrer"; _class "opacity-60 hover:opacity-100 transition-opacity" ] [
                         img [ _src "/img/codeberg-logo_icon_white.svg"; _alt "Codeberg"; _width "20"; _height "20" ]
                     ]
                 ]

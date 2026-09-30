@@ -35,6 +35,10 @@
 }
 
 @theme {
+  /* Bai Jamjuree — the typeface used by swiss-baseball.ch. Sets the default
+     sans font for the whole site (loaded from Google Fonts in the <head>). */
+  --font-sans: "Bai Jamjuree", ui-sans-serif, system-ui, sans-serif;
+
   /* Oakland A's brand palette (static). */
   --color-barracuda-dark: #00211a;
   --color-barracuda: #003831;

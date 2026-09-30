@@ -26,6 +26,11 @@ let private earlyThemeScript =
 let private themeToggleScript =
     "(function(){function eff(){var t=document.documentElement.getAttribute('data-theme');if(t==='dark'||t==='light')return t;return window.matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light';}function paint(){var d=eff()==='dark';var k=document.getElementById('theme-knob'),s=document.getElementById('theme-sun'),m=document.getElementById('theme-moon');if(k)k.style.transform=d?'translateX(1.5rem)':'translateX(0.125rem)';if(s)s.style.display=d?'none':'inline';if(m)m.style.display=d?'inline':'none';}window.toggleTheme=function(){var n=eff()==='dark'?'light':'dark';document.documentElement.setAttribute('data-theme',n);try{localStorage.setItem('theme',n);}catch(e){}paint();};try{window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change',function(){if(!localStorage.getItem('theme'))paint();});}catch(e){}paint();})();"
 
+// Closes any open <details> popup (column picker, mobile nav) when a click lands
+// outside it. Bound to document once, so it keeps working across HTMX swaps.
+let private dismissPopupsScript =
+    "(function(){document.addEventListener('click',function(e){document.querySelectorAll('details[open]').forEach(function(d){if(!d.contains(e.target))d.removeAttribute('open');});});})();"
+
 /// Slider-style light/dark switch — knob shows ☀ in light, ☾ in dark.
 let private themeToggle =
     button [ _id "theme-toggle"; _type "button"
@@ -112,5 +117,6 @@ let page (pollSeconds: int) (active: string) (pageTitle: string) (content: XmlNo
             ]
 
             script [] [ rawText themeToggleScript ]
+            script [] [ rawText dismissPopupsScript ]
         ]
     ]

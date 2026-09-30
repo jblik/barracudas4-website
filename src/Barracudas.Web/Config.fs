@@ -8,10 +8,14 @@ type AppConfig =
       BaseUrl: string
       /// EasyScore API key. Loaded from user-secrets / env — never committed.
       ApiKey: string
-      /// When true, serve fixture data from EasyScore.Mock instead of hitting the API.
-      UseMock: bool
+      /// Public swiss-baseball.ch admin-ajax endpoint that serves league data.
+      SourceUrl: string
+      /// swiss-baseball.ch league index for 1. Liga Baseball Ost.
+      LeagueIndex: int
       /// EasyScore team identifier for the Barracudas 1. Liga side.
       TeamId: string
+      /// Our team's short code in the league feed (e.g. "BAR4").
+      TeamAbbr: string
       /// League name/identifier.
       League: string
       /// Current season (year).
@@ -25,18 +29,16 @@ let load (cfg: IConfiguration) : AppConfig =
         match section.[key] with
         | null | "" -> fallback
         | v -> v
-    let boolOr key fallback =
-        match bool.TryParse(section.[key]) with
-        | true, v -> v
-        | _ -> fallback
     let intOr key fallback =
         match System.Int32.TryParse(section.[key]) with
         | true, v -> v
         | _ -> fallback
     { BaseUrl = str "BaseUrl" "https://api.easyscore.com"
       ApiKey = str "ApiKey" ""
-      UseMock = boolOr "UseMock" true
+      SourceUrl = str "SourceUrl" "https://www.swiss-baseball.ch/wp-admin/admin-ajax.php"
+      LeagueIndex = intOr "LeagueIndex" 160
       TeamId = str "TeamId" "barracudas4"
-      League = str "League" "1. Liga"
+      TeamAbbr = str "TeamAbbr" "BAR4"
+      League = str "League" "1. Liga Baseball Ost"
       Season = intOr "Season" System.DateTime.Now.Year
       LivePollSeconds = intOr "LivePollSeconds" 25 }

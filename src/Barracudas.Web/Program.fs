@@ -10,7 +10,7 @@ open Giraffe
 open Barracudas.Web
 open Barracudas.Web.EasyScore.Client
 open Barracudas.Web.EasyScore.Cache
-open Barracudas.Web.EasyScore.Mock
+open Barracudas.Web.EasyScore.SwissBaseball
 
 [<EntryPoint>]
 let main args =
@@ -25,18 +25,12 @@ let main args =
     let aboutPath = Path.Combine(builder.Environment.ContentRootPath, "content", "about.json")
     builder.Services.AddSingleton<Content.AboutContent>(Content.loadAbout aboutPath) |> ignore
 
-    // EasyScore client: mock or real, always behind the caching decorator.
+    // Live data from the public swiss-baseball.ch league feed, behind the caching decorator.
     builder.Services.AddSingleton<IEasyScoreClient>(fun sp ->
         let cache = sp.GetRequiredService<IMemoryCache>()
-        let inner : IEasyScoreClient =
-            if cfg.UseMock then
-                MockEasyScoreClient() :> IEasyScoreClient
-            else
-                let http = sp.GetRequiredService<IHttpClientFactory>().CreateClient()
-                http.BaseAddress <- Uri(cfg.BaseUrl)
-                if cfg.ApiKey <> "" then
-                    http.DefaultRequestHeaders.Add("X-API-Key", cfg.ApiKey)
-                EasyScoreClient(http, cfg) :> IEasyScoreClient
+        let http = sp.GetRequiredService<IHttpClientFactory>().CreateClient()
+        http.DefaultRequestHeaders.UserAgent.ParseAdd("Mozilla/5.0 (compatible; BarracudasWeb/1.0)")
+        let inner = SwissBaseballClient(http, cfg) :> IEasyScoreClient
         CachingEasyScoreClient(inner, cache) :> IEasyScoreClient)
     |> ignore
 

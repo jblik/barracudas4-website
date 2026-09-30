@@ -32,19 +32,13 @@ tailwindcss -i src/Barracudas.Web/assets/app.css \
 dotnet watch run --project src/Barracudas.Web --urls http://localhost:8080
 ```
 
-The app runs on port **8080** (not 5000, which macOS ControlCenter/AirPlay occupies).
-
 Open [http://localhost:8080](http://localhost:8080).
 
 ## Build for production (Docker)
 
 ```bash
 docker build -t barracudas-web .
-docker run -p 8080:8080 -e EasyScore__ApiKey=<key> barracudas-web
+docker run -p 8080:8080 -e EasyScore__ApiKey=<key> -e EasyScore__RequestUserId=<id> barracudas-web
 ```
 
 The multi-stage `Dockerfile` runs Tailwind and `dotnet publish` in the SDK image, then copies the output into a lean ASP.NET runtime image.
-
-## Configuration
-
-The EasyScore API key is read from the `EasyScore__ApiKey` environment variable (or `appsettings.Development.json` locally). The committed `appsettings.json` intentionally leaves it empty.

@@ -22,12 +22,18 @@ type Game =
 type Standing =
     { Rank: int
       Team: string
+      /// Short team code shown by swiss-baseball.ch (e.g. "BAR4", "WIT").
+      Abbr: string
+      /// Games played.
+      Games: int
       Wins: int
       Losses: int
       /// Winning percentage, 0.0–1.0.
       Pct: float
       /// Games behind the leader.
       GamesBehind: float
+      /// Current win/loss streak, e.g. "W2" or "L4".
+      Streak: string
       /// True for our own team (highlight row).
       IsUs: bool }
 

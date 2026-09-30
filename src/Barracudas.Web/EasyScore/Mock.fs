@@ -23,13 +23,13 @@ let private games : Game list =
       { Id = "g7"; Date = DateTime(year, 7, 6);  Opponent = "Zürich Challengers"; IsHome = false; Location = "Heerenschürli, Zürich"; Status = Scheduled; OurScore = None;   OpponentScore = None }
       { Id = "g8"; Date = DateTime(year, 7, 20); Opponent = "Wil Pirates";        IsHome = true;  Location = "Heerenschürli, Zürich"; Status = Scheduled; OurScore = None;   OpponentScore = None } ]
 
+// 1. Liga Baseball Ost (swiss-baseball.ch league index 160) — current table.
 let private standings : Standing list =
-    [ { Rank = 1; Team = "Bern Cardinals";     Wins = 6; Losses = 1; Pct = 0.857; GamesBehind = 0.0; IsUs = false }
-      { Rank = 2; Team = "Zürich Barracudas";  Wins = 5; Losses = 2; Pct = 0.714; GamesBehind = 1.0; IsUs = true }
-      { Rank = 3; Team = "Therwil Flyers";     Wins = 4; Losses = 3; Pct = 0.571; GamesBehind = 2.0; IsUs = false }
-      { Rank = 4; Team = "Wil Pirates";        Wins = 3; Losses = 4; Pct = 0.429; GamesBehind = 3.0; IsUs = false }
-      { Rank = 5; Team = "Luzern Hawks";       Wins = 2; Losses = 5; Pct = 0.286; GamesBehind = 4.0; IsUs = false }
-      { Rank = 6; Team = "Bern Devils";        Wins = 1; Losses = 6; Pct = 0.143; GamesBehind = 5.0; IsUs = false } ]
+    [ { Rank = 1; Team = "Wittenbach-St.Gallen"; Abbr = "WIT";      Games = 6; Wins = 6; Losses = 0; Pct = 1.000; GamesBehind = 0.0; Streak = "W6"; IsUs = false }
+      { Rank = 2; Team = "Zürich Barracudas 4";  Abbr = "BAR4";     Games = 6; Wins = 4; Losses = 2; Pct = 0.667; GamesBehind = 2.0; Streak = "W2"; IsUs = true }
+      { Rank = 3; Team = "Embrach Mustangs 2";   Abbr = "BTE2";     Games = 6; Wins = 2; Losses = 4; Pct = 0.333; GamesBehind = 4.0; Streak = "W1"; IsUs = false }
+      { Rank = 4; Team = "Wil Pirates 2";        Abbr = "DEV";      Games = 6; Wins = 2; Losses = 4; Pct = 0.333; GamesBehind = 4.0; Streak = "L4"; IsUs = false }
+      { Rank = 5; Team = "Zürich Eighters";      Abbr = "EIG/LIO2"; Games = 6; Wins = 1; Losses = 5; Pct = 0.167; GamesBehind = 5.0; Streak = "L2"; IsUs = false } ]
 
 let private teamStats : TeamStat list =
     [ { Label = "Record";       Value = "5–2" }

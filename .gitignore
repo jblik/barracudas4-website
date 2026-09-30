@@ -1,0 +1,18 @@
+# .NET
+bin/
+obj/
+*.user
+
+# Secrets / local config
+.env
+appsettings.Development.json
+src/Barracudas.Web/appsettings.Development.json
+
+# Generated assets
+src/Barracudas.Web/wwwroot/css/site.css
+
+# Tools (downloaded binary)
+tools/tailwindcss
+
+# OS
+.DS_Store
